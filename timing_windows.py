@@ -1,9 +1,10 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 # OT timing window manipulation
 # Bryan Miller
 # 2018-05-18
 
+from __future__ import print_function
 import numpy as np
 from astropy.time import Time
 from astropy.coordinates import SkyCoord
@@ -11,6 +12,7 @@ import astropy.units as u
 import astroplan as ap
 import re
 import timeutils as tu
+# Uncomment the following if this hasn't been done in a while
 # from astroplan import download_IERS_A
 # download_IERS_A()
 
@@ -43,7 +45,7 @@ gshoriz = np.sqrt(2.*gs.location.height/EQUAT_RAD)*(180./np.pi)*u.deg
 # epoch 1
 # otwin = '[{1493948945000 3600000 400 140740000}]'
 # epoch 2,3
-otwin = '[{1488592145000 3600000 400 140740000}]'
+# otwin = '[{1488592145000 3600000 400 140740000}]'
 # New, all
 otwin = '[{1526872703000 1800000 100 140740000}]'
 
