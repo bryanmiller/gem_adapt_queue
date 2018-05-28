@@ -5,7 +5,7 @@ import astropy.units as u
 from astroplan import (download_IERS_A,Observer)
 from astropy import (coordinates,time)
 from read_cat import Catalog
-from gemini_programs import Gemini_programs
+from gemini_class import Gprogram
 
 #starttime = time.time()
 #print('Time to read: ',time.time()-starttime)
@@ -83,7 +83,7 @@ local_1800 = startdate+' 18:00:00.000' #set reference time to startdate at 18:00
 utc_1800 = time.Time(local_1800,scale='utc')-utc_to_local #get corresponding utc time 
 print('18:00 local time: ',utc_1800)
 
-#   ================================== Read catalog and select observations to queue ================================================
+#   ================================== Read catalog and save programs to class object ================================================
 
 otcat = Catalog(otfile) #read catalog and store info in object
 
@@ -103,7 +103,7 @@ while True:
         break
 
 # Store programs in class object. Currently stores lists of observation names - will change later to store lists of class objects. 
-programs = Gemini_programs(gemprgid=otcat.prog_ref[i_program], \
+programs = GPrograms(gemprgid=otcat.prog_ref[i_program], \
                             partner=otcat.partner[i_program], \
                             pi=otcat.pi[i_program], \
                             allocated_time=otcat.planned_exec_time[i_program], \
