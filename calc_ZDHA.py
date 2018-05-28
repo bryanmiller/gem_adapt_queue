@@ -38,12 +38,12 @@ def calc_ZDHA(lst,latitude,longitude,ra,dec):
 
     ZD = 90 - h1
 
-    ZDc = ZD
+    ZDc = np.array(ZD)
     indeces = np.where(ZD > 85)[0][:]
     if (len(indeces) != 0): 
         ZDc[indeces]=85.0
 
-    ZD=ZD - 0.00452 * 800.0 * np.tan(ZDc/degrad)/(273.0 + 10.0)
+    ZD = ZD - 0.00452 * 800.0 * np.tan(ZDc/degrad)/(273.0 + 10.0)
 
     return ZD,HA,AZ
 
