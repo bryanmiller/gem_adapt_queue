@@ -4,18 +4,19 @@ import convcond
 import calc_ZDHA
 import gcirc
 import sb
+from obsweight import obsweight
 from gemini_programs import Gobservation
 import astropy.units as u
 from matplotlib import pyplot as plt
 from astropy import (coordinates,time)
 
-def plan_day(i_day,i_obs,n_obs,otcat,site,prog_status,conditions,actual_conditions,elev_const,utc_time,local_time):
+def plan_day(i_day,i_obs,n_obs,otcat,site,prog_status,cond,actual_cond,elev_const,utc_time,local_time):
     
     starttime = t.time() #time program runtime
 
 #   =================================== Get required times/quantities for current night ==================================================
     
-    degrad  =   57.2957795130823
+    degrad = 57.2957795130823
     sun_horiz = -.83*u.degree
     equat_radius = 6378137.*u.m
 
@@ -73,6 +74,7 @@ def plan_day(i_day,i_obs,n_obs,otcat,site,prog_status,conditions,actual_conditio
     timesteps = (step_num*dt*u.h+evening_twilight) #get time objects for night.
 
     lst = np.zeros(n_timesteps) #initlize list of lst times at each timestep
+    print('\nNumber of time steps',n_timesteps)
 
     print('\nComputing local sidereal time throughout night...')
     for i in range(0,n_timesteps): #get lst times throughout night in hours
@@ -93,12 +95,17 @@ def plan_day(i_day,i_obs,n_obs,otcat,site,prog_status,conditions,actual_conditio
     mZD,mHA,mAZ = calc_ZDHA.calc_ZDHA(lst,longitude,latitude,moon_ra,moon_dec) #compute zenith distance, hour angle, and azimuth  
 
     ii = np.where(mHA>12.0)[0][:] #adjust range of moon hour angles
-    if len(ii)!=0:
-        mHA[ii]=mHA[ii]-24.
+    mHA[ii]=mHA[ii]-24.
 
     print('\nComputing mAM...')
-    sec_z = 1. / np.cos((mZD < 87.)/degrad)
-    mAM = sec_z - 0.0018167 * ( sec_z - 1 ) - 0.002875 * ( sec_z - 1 )**2 - 0.0008083 * ( sec_z - 1 )**3 #compute moon AMs
+    mAM = np.full(n_timesteps,20.) #set large initial AM value
+    ii = np.where(mZD < 87.)[0][:]
+    sec_z = 1. / np.cos(mZD[ii]*u.deg)
+    mAM[ii] = sec_z - 0.0018167 * ( sec_z - 1 ) - 0.002875 * ( sec_z - 1 )**2 - 0.0008083 * ( sec_z - 1 )**3 #compute moon AMs
+    
+    #print('mZD',mZD)
+    #print('sec_z',sec_z)
+    #print('mAM',mAM)
 
     print('\nComputing sun positions...')
     sun_ra = np.zeros(n_timesteps) #initialize array of sun ras 
@@ -114,10 +121,10 @@ def plan_day(i_day,i_obs,n_obs,otcat,site,prog_status,conditions,actual_conditio
 
 #   ============================================ Initialize structures ======================================================================
 
-    # actcond = np.repeat({'iq':actual_conditions[0],\
-    #                         'cc':actual_conditions[1],\
-    #                         'sb':actual_conditions[2],\
-    #                         'wv':actual_conditions[3]},\
+    # actcond = np.repeat({'iq':actual_cond[0],\
+    #                         'cc':actual_cond[1],\
+    #                         'sb':actual_cond[2],\
+    #                         'wv':actual_cond[3]},\
     #                         n_obs)
 
     # plan = {'jd':jul_date,\
@@ -186,13 +193,17 @@ def plan_day(i_day,i_obs,n_obs,otcat,site,prog_status,conditions,actual_conditio
     print('\nCycling through observations...')
     #Cycle through observations.
 
+    acond = []
     all_ZD = []
     all_HA = []
     all_AZ = []
     all_AM = []
     all_mdist = []
-    actcond = []
-    weight = []
+    all_weight = []
+    all_i_obs_win = []
+    all_wmax = []
+    all_i_wmax = []
+
     for i in range(0,n_obs):
         
         print('\nObservation: '+otcat.obs_id[i_obs[i]])
@@ -211,17 +222,23 @@ def plan_day(i_day,i_obs,n_obs,otcat,site,prog_status,conditions,actual_conditio
         all_HA.append(oHA)
         all_AZ.append(oAZ)
 
-        #compute target AMs
-        sec_z = 1. / np.cos((oZD < 87.)/degrad)
-        oAM = sec_z - 0.0018167 * ( sec_z - 1 ) - 0.002875 * ( sec_z - 1 )**2 - 0.0008083 * ( sec_z - 1 )**3
+        #compute target AMs for < 87deg
+        oAM = np.full(n_timesteps,20.) #set all AM to large initial value
+        ii = np.where(oZD < 87.)[0][:]
+        sec_z = 1. / np.cos((oZD[ii])*u.deg)
+        oAM[ii] = sec_z - 0.0018167 * ( sec_z - 1 ) - 0.002875 * ( sec_z - 1 )**2 - 0.0008083 * ( sec_z - 1 )**3
         all_AM.append(oAM)
+        
+        # print('oZD',oZD)
+        #print('sec_z',sec_z)
+        #print('oAM',oAM)
 
         mdist=gcirc.degrees(moon_ra,moon_dec,ra,dec) #get distance of target from moon
         all_mdist.append(mdist)
 
         #   ===================== Get sky brightness throughout night and convert actual conditions =======================
 
-        vsb=sb.sb(moon_phase,mdist,mZD,oZD,sZD,conditions[i]['cc']) #get sky background from lunar phase and distance
+        vsb=sb.sb(moon_phase,mdist,mZD,oZD,sZD,cond[i]['cc']) #get sky background from lunar phase and distance
         sbconds = np.zeros(n_timesteps,dtype='U4')
         #print('vsb',vsb)
         ii = np.where(vsb <= 19.61)[0][:]
@@ -235,12 +252,12 @@ def plan_day(i_day,i_obs,n_obs,otcat,site,prog_status,conditions,actual_conditio
         #print('sbconds',sbconds)
         
         temp_cond = np.empty(n_timesteps,dtype={'names':('iq','cc','bg','wv'),'formats':('f8','f8','f8','f8')})
-        aiq = np.repeat(actual_conditions[0],n_timesteps)
-        acc = np.repeat(actual_conditions[1],n_timesteps)
+        aiq = np.repeat(actual_cond[0],n_timesteps)
+        acc = np.repeat(actual_cond[1],n_timesteps)
         asb = sbconds
-        awv = np.repeat(actual_conditions[3],n_timesteps)
+        awv = np.repeat(actual_cond[3],n_timesteps)
         temp_cond['iq'],temp_cond['cc'],temp_cond['bg'],temp_cond['wv']=convcond.convert_array(aiq,acc,asb,awv)
-        actcond.append(temp_cond)
+        acond.append(temp_cond)
         #print('aiq',aiq,'acc',acc,'asb',asb,'awv',awv)
         #print(actcond)
 
@@ -252,14 +269,41 @@ def plan_day(i_day,i_obs,n_obs,otcat,site,prog_status,conditions,actual_conditio
         time_win = [0,0]
         
         ttime = round( ( prog_status['tot_time'][i] - prog_status['obs_time'][i] ) *10 ) /10 #get observation time
-        
+        # print('ttime',ttime)
+
+        ii = 0 #reset value
         for j in np.arange(12): #Get ra histogram bin
             if ((obs.ra[i] >= bin_edges[j]) and (obs.ra[i] <= bin_edges[j+1])): #get ra historgram bin
                 ii=j
         if (ttime > 0.0):
-            temp_weight = obs_weight.weights() 
-            weight.append(temp_weight)
+            temp_weight = obsweight(cond=cond[i],dec=dec,AM=oAM,HA=oHA,AZ=oAZ,band=prog_status['band'][i],user_prior=otcat.user_prio[i_obs[i]],\
+                                    status=0.,latitude=latitude,acond=temp_cond,wind=None,otime=0.,wra=None,elev=elev_const[i],starttime=None,verbose=True,)
+            all_weight.append(temp_weight)
+        else: 
+            temp_weight = np.zeros(n_timesteps)
+            all_weight.append(temp_weight)
 
-        #exit()
+        #   ===================== Observation windows =======================
+
+        nttime = np.int(round(ttime/dt)) #get number of time steps needed for observation
+        # print('nttime',nttime)
+
+        nobswin=0
+        ii = np.where(temp_weight>0.)[0][:]
+        if len(ii)!=0:
+            nobswin = len(ii)
+            i_wmax = np.argmax(temp_weight)
+            print('i_wmax',i_wmax)
+            all_i_obs_win.append([ii[0],ii[-1]])
+            all_i_wmax.append(np.argmax(temp_weight))
+            all_wmax.append(temp_weight[i_wmax])
+        else:
+            all_i_obs_win.append([None,None])
+            all_i_wmax.append(None)
+            all_wmax.append(None)
+        # print('weight',temp_weight)
+        # print('nobswin ',nobswin)
+        # print('wmax',wmax,i_wmax)
+
 
     print('Runtime = ',t.time()-starttime) 
