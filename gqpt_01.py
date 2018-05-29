@@ -6,7 +6,7 @@ from astropy import (coordinates,time)
 from read_cat import Catalog
 import convcond
 import elevconst
-import queueplanner
+import queueplanner 
 from gemini_programs import Gprogram
 
 #starttime = time.time()
@@ -72,7 +72,7 @@ print('Latitude: ',coordinates.Angle(site.location.lat))
 
 #   ======================================= Create objects for current local and utc time ==============================================
 
-current_time = time.Time.now() + 15*u.d #add days for testing different moon phases
+current_time = time.Time.now() + 0*u.d #add days for testing different moon phases
 utc_time = time.Time(current_time,scale='utc',location=(coordinates.Angle(site.location.lon),coordinates.Angle(site.location.lat)))
 local_time = utc_time + time_diff_utc
 print('\nTime: ',utc_time.iso)
@@ -107,7 +107,7 @@ print('\n'+str(n_obs)+' observations readied for queueing...')
 
 #   ======================================================= Initialize structures ======================================================================
 
-conditions = np.empty(n_obs,dtype={'names':('iq','cc','bg','wv'),'formats':('f8','f8','f8','f8')})
+cond = np.empty(n_obs,dtype={'names':('iq','cc','bg','wv'),'formats':('f8','f8','f8','f8')})
 prog_status = np.empty(n_obs,dtype={'names':('prog_id','obs_id','target','band','comp_time','tot_time','obs_time'),'formats':('U30','U30','U60','i8','f8','f8','f8')})
 elev_const = np.empty(n_obs,dtype={'names':('type','min','max'),'formats':('U20','f8','f8')})
 
@@ -138,9 +138,9 @@ for i in range(0,n_obs): #cycle through selected observations
     #compute and fill elev_const structure
     elev_const[i]=elevconst.convert(otcat.elev_const[i_obs[i]])
 
-print('\nConverting conditions...')
-#convert conditions and fill conditions dictionary
-conditions['iq'],conditions['cc'],conditions['bg'],conditions['wv']=convcond.convert_array(otcat.iq[i_obs],otcat.cloud[i_obs],otcat.sky_bg[i_obs],otcat.wv[i_obs])
+print('\nConverting cond...')
+#convert cond and fill cond dictionary
+cond['iq'],cond['cc'],cond['bg'],cond['wv']=convcond.convert_array(otcat.iq[i_obs],otcat.cloud[i_obs],otcat.sky_bg[i_obs],otcat.wv[i_obs])
 
 
 print('\nStoring program status information...')
@@ -168,10 +168,10 @@ print('\nBeginning scheduling...')
 for i_day in range(0,1):
     print('\n____________________Night '+str(i_day+1)+'________________________')
     
-    actual_conditions = ['20%','20%','20%','20%'] 
+    actual_cond = ['20%','20%','20%','20%'] 
     
     #make plan for single night
-    queueplanner.plan_day(i_day,i_obs,n_obs,otcat,site,prog_status,conditions,actual_conditions,elev_const,utc_time,local_time)
+    queueplanner.plan_day(i_day,i_obs,n_obs,otcat,site,prog_status,cond,actual_cond,elev_const,utc_time,local_time)
 
 
 
