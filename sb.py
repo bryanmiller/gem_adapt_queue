@@ -29,8 +29,6 @@ def sb(mpa,mdist,mZD,ZD,sZD,cc):
     # ZD = object zenith distance [deg]
     # sZD = Sun zenith distance [deg]
     # cc = Cloud Cover constraint
-
-    print('Getting sb values... ')
     
     degrad = 57.2957795130823/u.rad
     k = 0.172 #mag/airmass relation for Hale Pohaku
