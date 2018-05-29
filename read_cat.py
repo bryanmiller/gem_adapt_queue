@@ -52,7 +52,7 @@ class Catalog(object):
 
             setattr(self, string, obsall[:,i]) #set attribute name an include corresponding catalog column
             existing_names.append(string) #add name to library of used names
-            print(string)
+            #print(string)
 
         print('\nFound '+str(len(obsall))+' observations in '+str(otfile))
 
