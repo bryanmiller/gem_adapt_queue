@@ -47,3 +47,5 @@ def calc_ZDHA(lst,latitude,longitude,ra,dec):
 
     return ZD,HA,AZ
 
+
+
