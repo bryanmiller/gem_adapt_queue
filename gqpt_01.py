@@ -8,6 +8,7 @@ import convcond
 import elevconst
 import queueplanner 
 from gemini_programs import Gprogram
+from amplot import amplot
 
 #starttime = time.time()
 #print('Time to read: ',time.time()-starttime)
@@ -171,10 +172,9 @@ for i_day in range(0,1):
     actual_cond = ['20%','20%','20%','20%'] 
     
     #make plan for single night
-    queueplanner.plan_day(i_day,i_obs,n_obs,otcat,site,prog_status,cond,actual_cond,elev_const,utc_time,local_time)
+    obslist,plan = queueplanner.plan_day(i_day,i_obs,n_obs,otcat,site,prog_status,cond,actual_cond,elev_const,utc_time,local_time)
 
-
-
+    amplot(obslist,plan,prog_status)
 
 
 
