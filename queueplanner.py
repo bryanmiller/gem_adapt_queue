@@ -1,18 +1,24 @@
 import time as t
 import numpy as np
+import scipy
 import convcond
 import calc_ZDHA
 import gcirc
 import sb
+from intervals import intervals
 from obsweight import obsweight
 from gemini_programs import Gobservation
 import astropy.units as u
 from matplotlib import pyplot as plt
 from astropy import (coordinates,time)
+import copy 
 
 def plan_day(i_day,i_obs,n_obs,otcat,site,prog_status,cond,actual_cond,elev_const,utc_time,local_time):
     
     starttime = t.time() #time program runtime
+
+
+
 
 #   =================================== Get required times/quantities for current night ==================================================
     
@@ -63,6 +69,7 @@ def plan_day(i_day,i_obs,n_obs,otcat,site,prog_status,cond,actual_cond,elev_cons
 
 
 
+
 #   ====================== Define 1/10hr time increments between twilights and get corresponding LST times. ===========================   
 
     print('\nCreating array of timesteps between twilights...')
@@ -80,6 +87,7 @@ def plan_day(i_day,i_obs,n_obs,otcat,site,prog_status,cond,actual_cond,elev_cons
     for i in range(0,n_timesteps): #get lst times throughout night in hours
         temp_lst = timesteps[i].sidereal_time('apparent',coordinates.Angle(longitude*u.deg))
         lst[i]=(float(temp_lst.hour))
+
 
 
 
@@ -119,6 +127,8 @@ def plan_day(i_day,i_obs,n_obs,otcat,site,prog_status,cond,actual_cond,elev_cons
     # print('mZD',mZD)
 
 
+
+
 #   ============================================ Initialize structures ======================================================================
 
     # actcond = np.repeat({'iq':actual_cond[0],\
@@ -127,57 +137,65 @@ def plan_day(i_day,i_obs,n_obs,otcat,site,prog_status,cond,actual_cond,elev_cons
     #                         'wv':actual_cond[3]},\
     #                         n_obs)
 
-    # plan = {'jd':jul_date,\
-    #         'epoch':eqcur,\
-    #         'stmid':stmid,\
-    #         'UT':UT,\
-    #         'lst':lst,\
-    #         'year':year,\
-    #         'month':month,\
-    #         'day':day,\
-    #         'actcond':actcond,\
-    #         'mphase':moon_fraction,\
-    #         'mrise':moonrise_tonight,\
-    #         'mset':moonset_tonight,\
-    #         'mmidra':mmidra,\
-    #         'mmiddec':mmiddec,\
-    #         'mZD':mZD,\
-    #         'mAZ':mAZ,\
-    #         'mHA':mHA,\
-    #         'mAM':mAM,\
-    #         'sset':sunset_tonight,\
-    #         'srise':sunrise_tonight,\
-    #         'twieven':evening_twilight,\
-    #         'twimorn':morning_twilight,\
-    #         'sZD':sZD,\
-    #         'isel':np.ones(n_timesteps)}
+    plan = {#'jd':jul_date,\
+            #'epoch':eqcur,\
+            #'stmid':stmid,\
+            'UT':timesteps,\
+            'lst':lst,\
+            #'year':year,\
+            #'month':month,\
+            #'day':day,\
+            #'actcond':actcond,\
+            'mphase':moon_fraction,\
+            'mrise':moonrise_tonight,\
+            'mset':moonset_tonight,\
+            #'mmidra':mmidra,\
+            #'mmiddec':mmiddec,\
+            'mZD':mZD,\
+            'mAZ':mAZ,\
+            'mHA':mHA,\
+            'mAM':mAM,\
+            'sset':sunset_tonight,\
+            'srise':sunrise_tonight,\
+            'twieven':evening_twilight,\
+            'twimorn':morning_twilight,\
+            'sZD':sZD,\
+            'isel':np.ones(n_timesteps)}
 
-    # obs = {'ra':0.0,\
-    #         'dec':0.0,\
-    #         'ZD':np.zeros(n_timesteps),\
-    #         'HA':np.zeros(n_timesteps),\
-    #         'AZ':np.zeros(n_timesteps),\
-    #         'AM':np.zeros(n_timesteps),\
-    #         'mdist':np.zeros(n_timesteps),\
-    #         'sbcond':np.empty(n_timesteps,dtype='U4'),\
-    #         'weight':np.zeros(n_timesteps),\
-    #         'iobswin':None,\
-    #         'wmax':0.0},n_obs)
+
+    obs_dict = {'id':'None',\
+            'ra':0.0,\
+            'dec':0.0,\
+            'ZD':np.zeros(n_timesteps),\
+            'HA':np.zeros(n_timesteps),\
+            'AZ':np.zeros(n_timesteps),\
+            'AM':np.zeros(n_timesteps),\
+            'mdist':np.zeros(n_timesteps),\
+            'sbcond':np.empty(n_timesteps,dtype='U4'),\
+            'weight':np.zeros(n_timesteps),\
+            'iobswin':[0,0],\
+            'wmax':0.0}
+
+    obslist = []
+    [obslist.append(copy.deepcopy(obs_dict)) for ii in range(n_obs)]
+
+
+
 
 #   ============================================ Get histogram ra distribution ======================================================================
 
     print('\nGetting distribution of total observation hours as function of ra...')
-    temp_ra = np.zeros(n_obs)
-    temp_dec = np.zeros(n_obs)
+    
     #RA distribution of targets
     for i in range(0,n_obs):#correct for current epoch and store coordinates
         coord_j2000 = coordinates.SkyCoord(otcat.ra[i_obs[i]],otcat.dec[i_obs[i]], frame='icrs', unit=(u.deg, u.deg))
         current_epoch = coord_j2000.transform_to(coordinates.FK5(equinox='J'+str(utc_time.jyear)))
-        temp_ra[i] = float(current_epoch.ra/u.deg) #store ra degrees
-        temp_dec[i] =float(current_epoch.dec/u.deg) #store dec degrees
-    obs = Gobservation(ra=temp_ra,dec=temp_dec)
+        obslist[i]['ra'] = float(current_epoch.ra/u.deg) #store ra degrees
+        obslist[i]['dec'] = float(current_epoch.dec/u.deg) #store dec degrees
+
+    ras = [obslist[i]['ra'] for i in range(n_obs)]    
     bin_edges = [0.,30.,60.,90.,120.,150.,180.,210.,240.,270.,300.,330.,360.]
-    bin_nums = np.digitize(obs.ra,bins=bin_edges) #get ra bin number of each target
+    bin_nums = np.digitize(ras,bins=bin_edges) #get ra bin number of each target
 
     #Sum number of required hours in each 30deg histogram bin, divide by mean
     hhra = np.zeros(12)
@@ -188,29 +206,22 @@ def plan_day(i_day,i_obs,n_obs,otcat,site,prog_status,cond,actual_cond,elev_cons
 
 
 
-#   ============================================ Begin Scheduling ===================================================================
+
+#   ============================================ Compute time dependent values for all observations ===================================================================
 
     print('\nCycling through observations...')
     #Cycle through observations.
 
     acond = []
-    all_ZD = []
-    all_HA = []
-    all_AZ = []
-    all_AM = []
-    all_mdist = []
-    all_weight = []
-    all_i_obs_win = []
-    all_wmax = []
-    all_i_wmax = []
 
     for i in range(0,n_obs):
         
         print('\nObservation: '+otcat.obs_id[i_obs[i]])
 
-        ra = float(otcat.ra[i_obs[i]]) #target ra
-        dec = float(otcat.dec[i_obs[i]]) #target dec
+        ra = obslist[i]['ra'] #target ra
+        dec = obslist[i]['dec'] #target dec
         
+
 
         #   ===================== Compute target ZD, HA, AZ, AM, mdist throughout night =======================
 
@@ -218,23 +229,25 @@ def plan_day(i_day,i_obs,n_obs,otcat,site,prog_status,cond,actual_cond,elev_cons
         ii = np.where(oHA>12.0)[0][:] #adjust hour angle range
         if len(ii)!=0:
             oHA[ii]=oHA[ii]-24.
-        all_ZD.append(oZD) #store computed values
-        all_HA.append(oHA)
-        all_AZ.append(oAZ)
+        obslist[i]['ZD'] = oZD #store computed values
+        obslist[i]['HA'] = oHA
+        obslist[i]['AZ'] = oAZ
 
         #compute target AMs for < 87deg
         oAM = np.full(n_timesteps,20.) #set all AM to large initial value
         ii = np.where(oZD < 87.)[0][:]
         sec_z = 1. / np.cos((oZD[ii])*u.deg)
         oAM[ii] = sec_z - 0.0018167 * ( sec_z - 1 ) - 0.002875 * ( sec_z - 1 )**2 - 0.0008083 * ( sec_z - 1 )**3
-        all_AM.append(oAM)
+        obslist[i]['AM'] = oAM
         
         # print('oZD',oZD)
         #print('sec_z',sec_z)
         #print('oAM',oAM)
 
         mdist=gcirc.degrees(moon_ra,moon_dec,ra,dec) #get distance of target from moon
-        all_mdist.append(mdist)
+        obslist[i]['mdist'] = mdist
+
+
 
         #   ===================== Get sky brightness throughout night and convert actual conditions =======================
 
@@ -257,31 +270,34 @@ def plan_day(i_day,i_obs,n_obs,otcat,site,prog_status,cond,actual_cond,elev_cons
         asb = sbconds
         awv = np.repeat(actual_cond[3],n_timesteps)
         temp_cond['iq'],temp_cond['cc'],temp_cond['bg'],temp_cond['wv']=convcond.convert_array(aiq,acc,asb,awv)
+        
         acond.append(temp_cond)
+        obslist[i]['sbcond'] = temp_cond['bg']
+        
         #print('aiq',aiq,'acc',acc,'asb',asb,'awv',awv)
         #print(actcond)
+
+
 
         #   ===================== Compute observation weights =======================
 
         istatus = np.where( prog_status['prog_id'] == otcat.prog_ref[i_obs[i]] )[0][:] #get obs. indices for current program
-
-        i_obs_win = [0,0]
-        time_win = [0,0]
         
         ttime = round( ( prog_status['tot_time'][i] - prog_status['obs_time'][i] ) *10 ) /10 #get observation time
         # print('ttime',ttime)
 
         ii = 0 #reset value
         for j in np.arange(12): #Get ra histogram bin
-            if ((obs.ra[i] >= bin_edges[j]) and (obs.ra[i] <= bin_edges[j+1])): #get ra historgram bin
+            if ((obslist[i]['ra'] >= bin_edges[j]) and (obslist[i]['ra'] <= bin_edges[j+1])): #get ra historgram bin
                 ii=j
         if (ttime > 0.0):
-            temp_weight = obsweight(cond=cond[i],dec=dec,AM=oAM,HA=oHA,AZ=oAZ,band=prog_status['band'][i],user_prior=otcat.user_prio[i_obs[i]],\
-                                    status=0.,latitude=latitude,acond=temp_cond,wind=None,otime=0.,wra=None,elev=elev_const[i],starttime=None,verbose=True,)
-            all_weight.append(temp_weight)
-        else: 
-            temp_weight = np.zeros(n_timesteps)
-            all_weight.append(temp_weight)
+            temp_weight = obsweight(cond=cond[i],dec=obslist[i]['dec'],AM=obslist[i]['AM'],HA=obslist[i]['HA'],AZ=obslist[i]['AZ'],band=prog_status['band'][i],user_prior=otcat.user_prio[i_obs[i]],\
+                                    status=0.,latitude=latitude,acond=temp_cond,wind=None,otime=0.,wra=None,elev=elev_const[i],starttime=None,verbose=False,)
+            obslist[i]['weight'] = temp_weight
+        else:
+            obslist[i]['weight'] = np.zeros(n_timesteps)
+
+
 
         #   ===================== Observation windows =======================
 
@@ -289,21 +305,273 @@ def plan_day(i_day,i_obs,n_obs,otcat,site,prog_status,cond,actual_cond,elev_cons
         # print('nttime',nttime)
 
         nobswin=0
-        ii = np.where(temp_weight>0.)[0][:]
+        ii = np.where(obslist[i]['weight']>0.)[0][:]
         if len(ii)!=0:
             nobswin = len(ii)
-            i_wmax = np.argmax(temp_weight)
+            i_wmax = np.argmax(obslist[i]['weight'])
             print('i_wmax',i_wmax)
-            all_i_obs_win.append([ii[0],ii[-1]])
-            all_i_wmax.append(np.argmax(temp_weight))
-            all_wmax.append(temp_weight[i_wmax])
+            obslist[i]['iobswin'] = [ii[0],ii[-1]]
+            obslist[i]['wmax'] = obslist[i]['weight'][i_wmax]
         else:
-            all_i_obs_win.append([None,None])
-            all_i_wmax.append(None)
-            all_wmax.append(None)
+            obslist[i]['iobswin'] = [-1,-1]
+            obslist[i]['wmax'] = -1
         # print('weight',temp_weight)
         # print('nobswin ',nobswin)
         # print('wmax',wmax,i_wmax)
+
+
+#   ============================================ Begin scheduling ===================================================================
+    
+    print('\nScheduling...\n')
+    ntcal = 0
+    plan['isel'][:] = -1
+    nsel = 0
+    ii = np.where(plan['isel'] == -1)[0][:]
+    
+    while len(ii)!=0:
+        
+        print('\nIteration: ',nsel+1)
+
+        #define min block
+        nminuse = 10
+
+        #bin indices of adjacent timeslots
+        indx = intervals(ii)
+
+        #get indices of first unscheduled time block 
+        iint = ii[np.where(indx==1)[0][:]]
+        print('ii:',ii)
+        print('iint: ',iint)
+        # print('indx',indx)
+        # print('iint',iint)
+
+        gow = True
+        while gow: #schedule observation with maximum weight in time interval
+            maxweight = 0.
+            iimax = -1
+
+            for i in np.arange(n_obs):
+                if (len(ii) >= 2):
+                    print(obslist[i]['weight'][iint])
+                    i_wmax = np.argmax(obslist[i]['weight'][iint])+iint[0]
+                    wmax = obslist[i]['weight'][i_wmax]
+                else:
+                    wmax = obslist[i]['weight'][iint]
+
+                if (wmax > maxweight):
+                    maxweight = wmax
+                    iimax = i
+
+                print('maxweight',maxweight)
+                print('iimax',iimax)
+
+            if (iimax == -1):
+                gow = False
+            else:
+                print('iobswin',obslist[iimax]['iobswin'])
+                print('iint',iint)
+                # Time interval limited by observing window or plan window?
+                istart = np.maximum(obslist[iimax]['iobswin'][0],iint[0])
+                iend = np.minimum(obslist[iimax]['iobswin'][1],iint[-1])
+                nobswin = iend - istart + 1
+                print('nobswin',nobswin)
+
+                print('Inst: ',otcat.inst[i_obs[iimax]])
+                print('Disperser: ',otcat.disperser[i_obs[iimax]])
+                if (otcat.inst[i_obs[iimax]]!='GMOS'):
+                    if np.logical_and(otcat.disperser[i_obs[iimax]]!='Mirror',otcat.disperser[i_obs[iimax]]=='null'):
+                        ntcal = 3
+                        print('add ntcall=3')
+
+                # total time remaining in observation, include calibration time
+                ttime = round((prog_status['tot_time'][iimax] - prog_status['obs_time'][iimax]) *10. + 0.5 ) /10
+                nttime = int(round(ttime / dt) + ntcal) #number of steps
+
+                # Try not to leave little pieces of programs
+                # if (nttime - nminuse) <= nminuse:
+                #     nminuse = nttime
+
+                #Set weights to zero if observation can be done within window
+                if np.logical_or(nttime<nobswin,nobswin>nminuse):
+                    gow = False
+                else:
+                    obslist[iimax]['weight'][iint] = 0.
+                    print('Block too short to schedule...')
+
+            print('weight of chosen obs',obslist[iimax]['weight'])
+            print('istart',istart)
+            print('iend',iend)
+            print('ttime',ttime)
+            print('nttime',nttime)
+
+        if iimax == -1:
+            plan['isel'][iint] = -2
+        else:
+            # pick optimal observing window by integrating weight function
+            if np.logical_and(nttime < nobswin , nttime != 0):
+                
+                #indices where obs. is already scheduled
+                jj = np.where(plan['isel']==iimax)[0][:]
+                print('jj',jj)
+
+                x = np.arange(nttime,dtype=float)
+                maxf = 0.0
+                jstart = 0
+            
+                if nttime > 1:
+                    # NOTE: integrates over one extra time slot...
+                    # ie. if nttime = 14, then the program will choose 15
+                    # x values to do trapz integration (therefore integrating
+                    # 14 time slots). 
+                    print('\nIntegrating max obs. over window...')
+                    print('istart',istart)
+                    print('iend',iend)
+                    print('nttime',nttime)
+                    # print('obs weights all: ',obslist[iimax]['weight'])
+                    print('j values',np.arange(istart,iend-nttime+2))
+                    for j in range(istart,iend-nttime+2):
+                        print('j',j)
+                        print('obs wieght',obslist[iimax]['weight'][j:j+nttime])
+                        print('x',x)
+                        f = scipy.integrate.trapz(obslist[iimax]['weight'][j:j+nttime],x)
+                        print('integral',f)
+                        if f>maxf:
+                            maxf = f
+                            jstart = j
+
+                    jend = jstart + nttime - 1
+
+                else:
+                    jstart = np.argmax(obslist[iimax]['weight'][iint])
+                    maxf = np.amax(obslist[iimax]['weight'][jstart])
+                    jend = jstart + nttime - 1
+
+               
+                print('maxf',maxf)    
+                print('jstart',jstart)
+                print('jend',jend)
+
+                if jstart < nminuse:
+                    if np.logical_and( plan['isel'][0]==-1 , obslist[iimax]['weight'][0]>0. ):
+                        jstart = 0
+                        jend = jstart + nttime - 1
+                elif (n_timesteps-jend) < nminuse:
+                    if np.logical_and( plan['isel'][n_timesteps-1]==-1 , obslist[iimax]['weight'][n_timesteps-1]>0. ):
+                        jend = n_timesteps - 1
+                        jstart = jend - nttime + 1        
+
+                # dstart = jstart - istart - 1
+                # wstart = obslist[iimax]['weight'][istart]
+                # dend = iend - jend + 1
+                # wend = obslist[iimax]['weight'][iend] 
+                # if np.logical_and(dstart < nminuse , dend < nminuse):
+                #     if np.logical_and(wstart > wend , wstart > 0.):
+                #         jstart = istart
+                #         jend = istart + nttime - 1
+                #     elif wend > 0.:
+                #         jstart = iend - nttime + 1
+                #         jend = iend
+                # elif np.logical_and(dstart < nminuse , wstart > 0.):
+                #     jstart = istart
+                #     jend = istart + nttime - 1
+                # elif np.logical_and(dend < nminuse , wstart > 0.):
+                #     jstart = iend - nttime + 1
+                #     jend = iend
+                # else:
+                #     if (jj[0] < istart):
+                #         jstart = istart
+                #         jend = istart + nttime - 1
+                #     else:
+                #         jstart = iend - nttime + 1
+                #         jend = iend
+                    
+                #set weights of scheduled times to negatives
+                obslist[iimax]['weight'] = obslist[iimax]['weight'] * -1
+
+            else:
+                jstart = istart
+                jend = iend
+                #set weights of scheduled times to negatives
+                obslist[iimax]['weight'] = obslist[iimax]['weight'] * -1
+
+            print('Final jstart',jstart)
+            print('Final jend',jend)
+            print('New obs. weights: ',obslist[iimax]['weight'])
+            
+            #increment number of selected observations
+            nsel = nsel + 1
+
+            #set timeslots in plan to index of scheduled observation 
+            plan['isel'][jstart:jend] = iimax
+            
+            print('Current obs time: ',prog_status['obs_time'][iimax])
+            print('Current tot time: ',prog_status['tot_time'][iimax])
+
+            #update time observed
+            ntmin = np.minimum(nttime - ntcal , nobswin)
+            print('nttime - ntcal , nobswin: ',nttime - ntcal , nobswin)
+            print('ntmin: ',ntmin)
+
+            prog_status['obs_time'][iimax] = prog_status['obs_time'][iimax] + dt*ntmin
+            print('New obs time: ',prog_status['obs_time'][iimax])
+            print('Obs tot time: ',prog_status['tot_time'][iimax])
+
+            #update time status for observations in program
+            ii_obs = np.where(prog_status['prog_id'] == otcat.prog_ref[i_obs[iimax]])[0][:]
+            prog_status['comp_time'][iimax] = prog_status['comp_time'][iimax] + dt*ntmin/prog_status['tot_time'][iimax]
+            print('New comp time: ',prog_status['comp_time'][iimax])
+
+            #add time to total if observation was not fully completed
+            if prog_status['obs_time'][iimax] < prog_status['tot_time'][iimax]:
+                prog_status['tot_time'][iimax] = prog_status['tot_time'][iimax] + 0.3
+
+            # #if ntmin == nttime, observation is complete. Set all weights to negative
+            # if prog_status['obs_time'][iimax] >= prog_status['tot_time'][iimax]:
+            #     if (jstart!=0):
+            #         obslist[iimax]['weight'][0:(jstart-1)] = obslist[iimax]['weight'][0:(jstart-1)] * -1
+            #     if (jend!=0):
+            #         obslist[iimax]['weight'][(jend+1):n_timesteps-1] = obslist[iimax]['weight'][(jend+1):n_timesteps-1] * -1    
+        
+            print('Obs. added to program:',prog_status['obs_id'][iimax])
+        
+        print('Current program: ',plan['isel'])
+
+        ii = np.where(plan['isel'] == -1)[0][:]
+
+        t.sleep(0.5)
+
+
+    return obslist,plan
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
     print('Runtime = ',t.time()-starttime) 
