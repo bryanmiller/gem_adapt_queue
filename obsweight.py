@@ -2,8 +2,10 @@ import numpy as np
 import astropy.units as u
 
 def obsweight(cond, dec, AM, HA, AZ, band, user_prior, status, latitude,\
-               acond, wind, otime, wra, elev, starttime, verbose=False):
+               acond, wind, otime, wra, elev, starttime):
      
+     verbose = False
+
      """
      Calculate observation weights
      
