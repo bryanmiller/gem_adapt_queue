@@ -562,7 +562,7 @@ def plan_day(i_day,i_obs,n_obs,otcat,site,prog_status,cond,actual_cond,\
             #         obslist[iimax]['weight'][(jend+1):n_timesteps-1] = obslist[iimax]['weight'][(jend+1):n_timesteps-1] * -1    
         
             # if verbose: 
-            print('Obs. added to program:',prog_status['obs_id'][iimax],obslist[iimax])
+            # print('Obs. added to program:',prog_status['obs_id'][iimax],obslist[iimax])
         
         if verbose: print('Current program: ',plan['isel'])
 
