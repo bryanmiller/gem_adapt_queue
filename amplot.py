@@ -21,6 +21,8 @@ def amplot(obslist,plan,prog_status):
             plt.plot_date(plan['UT'][ii].plot_date,obslist[iimax]['AM'][ii],linestyle='-',linewidth=thk,markersize=0)
 
     plt.ylim(2.1, 0.9)
+    plt.ylabel('Airmass')
+    plt.xlabel('UTC')
     plt.show()
     
     return
