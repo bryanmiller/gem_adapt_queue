@@ -2,7 +2,7 @@
 import numpy as np
 import astropy.units as u
 
-def calc_ZDHA(lst,latitude,longitude,ra,dec):
+def calc_ZDHA(lst,longitude,latitude,ra,dec):
     # The calculations are from "Astronomical Photometry" by Henden & Kaitchuck
     # IDL version Bryan Miller 2004
     # converted to python Matt Bonnyman May 22, 2018 
@@ -30,18 +30,19 @@ def calc_ZDHA(lst,latitude,longitude,ra,dec):
     AZ = np.arccos(cos_A)*degrad
 
     HA = H/15.0
-    HA = HA + 24.0 * (HA < -12)
+    lt12 = np.where(HA < -12)[0][:]
+    HA[lt12] = HA[lt12] + 24.0 
 
-    indeces = np.where(HA>0)[0][:]
-    if (len(indeces) != 0):
-        AZ[indeces] = 360.0 - AZ[indeces]
+    ii = np.where(HA>0)[0][:]
+    if (len(ii) != 0):
+        AZ[ii] = 360.0 - AZ[ii]
 
     ZD = 90 - h1
 
     ZDc = np.array(ZD)
-    indeces = np.where(ZD > 85)[0][:]
-    if (len(indeces) != 0): 
-        ZDc[indeces]=85.0
+    ii = np.where(ZD > 85.)[0][:]
+    if (len(ii) != 0): 
+        ZDc[ii]=85.0
 
     ZD = ZD - 0.00452 * 800.0 * np.tan(ZDc/degrad)/(273.0 + 10.0)
 
