@@ -9,11 +9,10 @@ import elevconst
 import queueplanner 
 from gemini_programs import Gprogram
 from amplot import amplot
+from printplan import printplan
 
 #starttime = time.time()
 #print('Time to read: ',time.time()-starttime)
-
-#download_IERS_A()
 
 #   =============================================== Read command line =============================================================
 
@@ -48,10 +47,23 @@ parser.add_argument('-w', '--wv',\
                     default='Any',\
                     help='Water vapor constraint')
 
+parser.add_argument('-v', '--verbose',\
+                    action='store_true',\
+                    default=False,\
+                    help='Turn on verbose')
+
+parser.add_argument('-u', '--update',\
+                    action='store_true',\
+                    default=False,\
+                    help='Download updated IERS')
+
 parse = parser.parse_args()
 otfile = parse.otfile
 site_name = parse.site_name
 dst = parse.dst
+verbose = parse.verbose
+update = parse.update
+
 if parse.iq == 'Any':
     iq = parse.iq
 else:
@@ -65,7 +77,8 @@ if parse.wv == 'Any':
 else:
     wv = parse.wv[0:2] + '%'
 
-
+if update:
+    download_IERS_A()
 
 
 #   ================================================ Select observatory ==============================================================
@@ -197,10 +210,17 @@ for i_day in range(0,1):
     actual_cond = [iq,cc,'Any',wv]
 
     #make plan for single night
-    obslist,plan = queueplanner.plan_day(i_day,i_obs,n_obs,otcat,site,prog_status,cond,actual_cond,elev_const,utc_time,local_time)
+    obslist,plan = queueplanner.plan_day(i_day,i_obs,n_obs,otcat,site,prog_status,cond,actual_cond,elev_const,utc_time,local_time,verbose)
+
+    # print('plan',plan)
+    # print('lst',plan['UT'])
+    # print('utc',plan['lst'])
+    # print('Plan',plan['isel'])
+    printplan(i_obs,obslist,plan,prog_status,otcat,time_diff_utc)
 
     amplot(obslist,plan,prog_status)
 
+    
 
 
 
