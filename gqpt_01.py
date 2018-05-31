@@ -36,10 +36,34 @@ parser.add_argument('-dst','--daylightsavings',\
                     default=False,\
                     help='Daylight savings time [DEFAULT=False]')
 
+parser.add_argument('-i', '--iq',\
+                    default='70',\
+                    help='Image quality constraint')
+
+parser.add_argument('-c', '--cc',\
+                    default='50',\
+                    help='Cloud cover constraint')
+
+parser.add_argument('-w', '--wv',\
+                    default='Any',\
+                    help='Water vapor constraint')
+
 parse = parser.parse_args()
 otfile = parse.otfile
 site_name = parse.site_name
 dst = parse.dst
+if parse.iq == 'Any':
+    iq = parse.iq
+else:
+    iq = parse.iq[0:2] + '%'
+if parse.cc == 'Any':
+    cc = parse.cc
+else:
+    cc = parse.cc[0:2] + '%'
+if parse.wv == 'Any':
+    wv = parse.wv
+else:
+    wv = parse.wv[0:2] + '%'
 
 
 
@@ -169,8 +193,9 @@ print('\nBeginning scheduling...')
 for i_day in range(0,1):
     print('\n____________________Night '+str(i_day+1)+'________________________')
     
-    actual_cond = ['20%','20%','20%','20%'] 
-    
+    # actual_cond = ['20%','20%','20%','20%']
+    actual_cond = [iq,cc,'Any',wv]
+
     #make plan for single night
     obslist,plan = queueplanner.plan_day(i_day,i_obs,n_obs,otcat,site,prog_status,cond,actual_cond,elev_const,utc_time,local_time)
 
