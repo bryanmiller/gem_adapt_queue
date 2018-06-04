@@ -5,12 +5,9 @@ from astropy.time import Time
 __all__ = ["Gemini_programs"]
 
 
-
-
-
 def conv_time(array_times):
     """
-    Convert time string in form hh:mm:ss.ss to hours
+    Convert time string from hh:mm:ss.ss to hour quantity
     """
     hour = []
     values = np.core.defchararray.split(array_times,':')
@@ -18,15 +15,10 @@ def conv_time(array_times):
     return hour
 
 
-
-
-
-
 class Gprogram(object):
     
     """ 
-    A container class for information about a program's 
-    status, partners, observations... 
+    A container class for information about Gemini programs. 
     
 
     Definitions
@@ -72,45 +64,57 @@ class Gprogram(object):
 class Gobservation(object):
     
     """ 
-    A container class for information about a program's 
-    status, partners, observations... 
+    A container class for information about a single Gemini observation
+    over a continuous time range. 
 
     Definitions
     --------
-    gemprgid        (string)                unique program id
-    partner         (string/int index)      partner name
-    pi              (string)                principle investigator
-    allocated_time  (float)                 hour quantity of allocated program time
-    program_time    (float)                 hour quantity of time charged to program
-    parter_time     (float)                 hour quantity of time charged to partner
-    active          (boolean)               program ready for scheduling 
-    progstart       (astropy.time)          date of program activation
-    progend         (astropy.time)          date of program deactivation
-    completed       (boolean)  
-    too_status      (integer)               1=None, 2=standard, 3=rapid
-    scirank         (integer)               Science rank, band, or TAC ranking
-    obs             (list of objects)?      Identifiers of related observations
+    id              (string)                unique observation id
+    ra              (float)                 hour quantity of allocated program time
+    dec             (float)                 hour quantity of time charged to program
+    ZD              (array of floats)                 hour quantity of time charged to partner
+    HA              (array of floats)               program ready for scheduling 
+    AZ              (array of floats)          date of program activation
+    AM              (array of floats)          date of program deactivation
+    mdist           (array of floats)  
+    sbcond          (array of floats)               1=None, 2=standard, 3=rapid
+    weight          (array of floats)               Science rank, band, or TAC ranking
+    iobswin         (int. array len=2)      Identifiers of related observations
     
     """
     
     #@u.quantity_input(allocated_time=u.h, charged_time=u.h, partner_time=u.h)
-    def __init__(self, ra=None, dec=None, ZD=None, \
+    def __init__(self, n, id=None, ra=None, dec=None, ZD=None, \
                 HA=None, AZ=None, AM=None, \
-                mdist=False, sbcond=None, weight=None, iobswin=False, \
-                wmax=1):
+                mdist=None, sbcond=None, weight=None, iobswin=None, \
+                wmax=0.):
 
+        self.name = id
         self.ra = ra
         self.dec = dec
-        self.ZD = ZD
-        self.HA = HA
-        self.AZ = AZ
-        self.AM = AM
-        self.mdist = mdist
-        self.sbcond = sbcond
-        self.weight = weight
-        self.iobswin = iobswin
+        self.ZD = np.zeros(n)
+        self.HA = np.zeros(n)
+        self.AZ = np.zeros(n)
+        self.AM = np.zeros(n)
+        self.mdist = np.zeros(n)
+        self.sbcond = np.zeros(n)
+        self.weight = np.zeros(n)
+        self.iobswin = np.zeros(2)
         self.wmax = wmax
 
+
+# obs_dict = {'id':'None',\
+#             'ra':0.0,\
+#             'dec':0.0,\
+#             'ZD':np.zeros(n_timesteps),\
+#             'HA':np.zeros(n_timesteps),\
+#             'AZ':np.zeros(n_timesteps),\
+#             'AM':np.zeros(n_timesteps),\
+#             'mdist':np.zeros(n_timesteps),\
+#             'sbcond':np.empty(n_timesteps,dtype='U4'),\
+#             'weight':np.zeros(n_timesteps),\
+#             'iobswin':[0,0],\
+#             'wmax':0.0}
 
 class Ggroup(object):
     
