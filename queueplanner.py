@@ -1,5 +1,6 @@
 import time as t
 import numpy as np
+import copy 
 import scipy
 import convcond
 import calc_ZDHA
@@ -11,13 +12,14 @@ from gemini_programs import Gobservation
 import astropy.units as u
 from matplotlib import pyplot as plt
 from astropy import (coordinates,time)
-import copy 
+from astroplan import Observer
+
+# starttime = t.time() #time program runtime
 
 def plan_day(i_day,i_obs,n_obs,otcat,site,prog_status,cond,actual_cond,\
                 elev_const,utc_time,local_time,verbose):
     
-    starttime = t.time() #time program runtime
-
+    fprint = '\t{0:<34s}' #print format   
 
 #   =================================== Get required times/quantities for current night ==================================================
     
@@ -43,16 +45,16 @@ def plan_day(i_day,i_obs,n_obs,otcat,site,prog_status,cond,actual_cond,\
     
 
     #utc time at local midnight 
-    utc_midnight = time.Time(str(utc_time)[0:10]+' 00:00:00.000')+1.*u.d #get utc midnight
-    local_midnight = utc_midnight+(utc_time-local_time) #get local midnight in utc time
+    #utc_midnight = time.Time(str(utc_time)[0:10]+' 00:00:00.000')+1.*u.d #get utc midnight
+    solar_midnight = site.midnight(utc_time,which='nearest') #get local midnight in utc time
     
 
     #get location of moon at local midnight
-    moon = coordinates.get_moon(local_midnight, location=site.location, ephemeris=None)
+    moon = coordinates.get_moon(solar_midnight, location=site.location, ephemeris=None)
     moon_ra = moon.ra/u.deg
     moon_dec = moon.dec/u.deg
-    moon_fraction = site.moon_illumination(local_midnight)
-    moon_phase = site.moon_phase(local_midnight)*degrad/u.rad
+    moon_fraction = site.moon_illumination(solar_midnight)
+    moon_phase = site.moon_phase(solar_midnight)*degrad/u.rad
     
 
     #moonrise/moonset times
@@ -61,17 +63,17 @@ def plan_day(i_day,i_obs,n_obs,otcat,site,prog_status,cond,actual_cond,\
     
 
     if verbose:
-        print('Site: long,lat',longitude,latitude)
-        print('Horizon angle: ',site_horiz)
-        print('Tonight\'s sun set/rise times (UTC): ',sunset_tonight.iso,',',sunrise_tonight.iso)
-        print('Tonight\'s evening/morning twilight times (UTC): ',evening_twilight.iso,',',morning_twilight.iso)
-        print('UTC at midnight tonight: ',utc_midnight)
-    print('Local midnight tonight(in UTC): ',local_midnight)    
-    print('Moon location (ra,dec): ',moon.ra,moon.dec)
-    print('Fraction of moon illuminated: ',moon_fraction)
-    print('Moon phase angle (deg): ',moon_phase)
-    print('Moon rise time: ',moonrise_tonight.iso)
-    print('Moon set time: ',moonset_tonight.iso)
+        print(fprint.format('Site: long,lat'),longitude,latitude)
+        print(fprint.format('Horizon angle: '),site_horiz)
+
+    print('')    
+    print(fprint.format('Solar midnight(UTC): '),solar_midnight.iso)  
+    print(fprint.format('Sun set/rise(UTC): '),sunset_tonight.iso,',',sunrise_tonight.iso)
+    print(fprint.format('Evening/morning twilight(UTC): '),evening_twilight.iso,',',morning_twilight.iso)
+    print(fprint.format('Moon rise/set time: '),moonrise_tonight.iso,',',moonset_tonight.iso)
+    print(fprint.format('Moon location (ra,dec): '),moon.ra,',',moon.dec)
+    print(fprint.format('Fraction of moon illuminated: '),'{:.2f}'.format(moon_fraction))
+    print(fprint.format('Moon phase angle (deg): '),'{:.2f}'.format(moon_phase))
 
 
 #   ====================== Define 1/10hr time increments between twilights and get corresponding LST times. ===========================   
@@ -220,7 +222,7 @@ def plan_day(i_day,i_obs,n_obs,otcat,site,prog_status,cond,actual_cond,\
 
 #   ============================================ Compute time dependent values for all observations ===================================================================
 
-    print('\nCalculating weights...')
+    # print('\nCalculating weights...')
     #Cycle through observations.
 
     acond = []
@@ -292,6 +294,7 @@ def plan_day(i_day,i_obs,n_obs,otcat,site,prog_status,cond,actual_cond,\
         if verbose:
             print('vsb',vsb)
             print('sbconds',sbconds)
+            exit()
 
 
 
@@ -339,7 +342,7 @@ def plan_day(i_day,i_obs,n_obs,otcat,site,prog_status,cond,actual_cond,\
 
 #   ============================================ Begin scheduling ===================================================================
     
-    print('\nScheduling...\n')
+    # print('\nScheduling...\n')
     ntcal = 0
     plan['isel'][:] = -1
     nsel = 0
@@ -568,7 +571,7 @@ def plan_day(i_day,i_obs,n_obs,otcat,site,prog_status,cond,actual_cond,\
 
         ii = np.where(plan['isel'] == -1)[0][:]
 
-    print('Runtime = ',t.time()-starttime) 
+    # print('Runtime = ',t.time()-starttime) 
 
     return obslist,plan
 
