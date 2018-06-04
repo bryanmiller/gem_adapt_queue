@@ -5,10 +5,10 @@ def printplan(i_obs,obslist,plan,prog_status,otcat,time_diff_utc):
     
     verbose = False
 
-    sprint = '{0:20s}{1:40s}{2:20s}{3:>30s}{4:>30s}{5:>10s}{6:>10s}{7:>10s}' 
-    fprint = '{0:20s}{1:40s}{2:20s}{3:>30s}{4:>30s}{5:10.2f}{6:10.2f}{7:10.2f}'
-    print(sprint.format('Obs. ID','Target','Instrument','Local','UT start','LST','AirM','HA'))
-    print(sprint.format('-------','------','---------','-----','--------','---','----','--'))
+    sprint = '{0:20.20s}{1:14.12s}{2:7.5s}{3:12.8}{4:12.8}{5:8.6s}{6:8.6s}{7:8.6s}{8:8.6s}' 
+    fprint = '{0:20.20s}{1:14.12s}{2:7.5s}{3:12.8}{4:12.8}{5:<8.2f}{6:<8.2f}{7:<8.2f}{8:<8.2f}'
+    print(sprint.format('Obs. ID','Target','Instr','Local','UT','LST','Hrs','AirM','HA'))
+    print(sprint.format('-------','------','-----','-----','--------','---','---','----','--'))
 
 
     sel_obs,ii,ri,count = np.unique(plan['isel'],return_index=True, return_inverse=True, return_counts=True)
@@ -22,6 +22,14 @@ def printplan(i_obs,obslist,plan,prog_status,otcat,time_diff_utc):
         
         time_index = int(ii_sort[i]) #get obs_index of next obs start time
         obs_index = int(sel_obs[ri[time_index]]) #get obs obs_index corresponding to plan['isel']
+        
+        n_slots = 1
+        while True:
+            if sel_obs[ri[time_index + (n_slots)]] == obs_index:
+                n_slots = n_slots + 1
+            else:
+                break
+
         if verbose:
             print('time_index',time_index)
             print('obs_index',obs_index)
@@ -31,13 +39,13 @@ def printplan(i_obs,obslist,plan,prog_status,otcat,time_diff_utc):
             obs_name = prog_status['obs_id'][obs_index]
             targ_name = prog_status['target'][obs_index]
             inst_name = otcat.inst[i_obs[obs_index]]
-            local_time = (plan['UT'][time_index]+time_diff_utc).iso
+            local_time = str((plan['UT'][time_index]+time_diff_utc).iso)[11:-4]
             lst_time = plan['lst'][time_index]
-            utc_start = plan['UT'][time_index].iso
+            utc_start = str(plan['UT'][time_index].iso)[11:-4]
             airmass = obslist[obs_index]['AM'][time_index]
             HA = obslist[obs_index]['HA'][time_index]
+            duration = n_slots * 1/10
+            print(fprint.format(obs_name,targ_name,inst_name,local_time,utc_start,lst_time,duration,airmass,HA))
             # print(type(local_time),type(lst_time),type(utc_start),type(airmass),type(HA))
-            print(fprint.format(obs_name,targ_name,inst_name,local_time,utc_start,lst_time,airmass,HA))
-     
 
     return
