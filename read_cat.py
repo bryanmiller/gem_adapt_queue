@@ -1,8 +1,6 @@
 import numpy as np
 import re
 
-__all__ = ["create"]
-
 class Catalog(object):
 
     """
@@ -16,7 +14,6 @@ class Catalog(object):
 
     def __init__(self,otfile=None):
 
-        print('\nReading '+otfile+'...')
         cattext = []
         with open(otfile, 'r') as readcattext: #read file into memory. 
             [cattext.append(line.split('\t')) for line in readcattext] #Split lines where tabs ('\t') are found.
@@ -25,7 +22,7 @@ class Catalog(object):
         names = np.array(cattext[8])
         obsall = np.array(cattext[10:])
 
-        print('\notcat attribute names...')
+        #print('\notcat attribute names...')
         existing_names = []
         for i in range(0,len(names)):
             #remove special charaters, trim ends of string, replace whitespace with underscore
@@ -54,5 +51,5 @@ class Catalog(object):
             existing_names.append(string) #add name to library of used names
             #print(string)
 
-        print('\nFound '+str(len(obsall))+' observations in '+str(otfile))
+        #print('\nFound '+str(len(obsall))+' observations in '+str(otfile))
 
