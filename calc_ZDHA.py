@@ -1,52 +1,57 @@
-
+import copy
 import numpy as np
 import astropy.units as u
 
 def calc_ZDHA(lst,longitude,latitude,ra,dec):
+
+    verbose = False
+
     # The calculations are from "Astronomical Photometry" by Henden & Kaitchuck
     # IDL version Bryan Miller 2004
     # converted to python Matt Bonnyman May 22, 2018 
-    
-    """Requires numpy arrays of lst time steps throughout night (in hours),
-    observer lat, lon, and target ra, dec.
-    Computes zenith distance, hour angle, and azimuth of target throughout night.
-    Return values in 3 numpy arrays."""
 
     n = len(lst)
     ZD = np.zeros(n)
-    HA = np.zeros(n)
     AZ = np.zeros(n)
 
-    degrad  =   57.2957795130823/u.rad
+    HA = (lst - ra)
+    if verbose: print('HA',HA)
 
-    H = 15.0 * (lst - ra/15.0)
+    sin_h1 = np.sin(latitude) * np.sin(dec) + \
+         np.cos(latitude) * np.cos(dec) * np.cos(HA)
+    h1 = np.arcsin(sin_h1)
+    if verbose: print('h1',h1)
 
-    sin_h1 = np.sin(latitude/degrad) * np.sin(dec/degrad) + \
-         np.cos(latitude/degrad) * np.cos(dec/degrad) * np.cos(H/degrad)
-    h1 = np.arcsin(sin_h1)*degrad
+    cos_A = ( np.sin(dec) - np.sin(latitude) * np.sin(h1))\
+        /(np.cos(latitude) * np.cos(h1))
+    AZ = np.arccos(cos_A)
+    if verbose: print('AZ',AZ)
 
-    cos_A = ( np.sin(dec/degrad) - np.sin(latitude/degrad) * np.sin(h1/degrad))\
-        /(np.cos(latitude/degrad) * np.cos(h1/degrad))
-    AZ = np.arccos(cos_A)*degrad
-
-    HA = H/15.0
-    lt12 = np.where(HA < -12)[0][:]
-    HA[lt12] = HA[lt12] + 24.0 
-
-    ii = np.where(HA>0)[0][:]
+    ii = np.where(HA < -12.*u.hourangle)[0][:]
     if (len(ii) != 0):
-        AZ[ii] = 360.0 - AZ[ii]
+        HA[ii] = HA[ii] + 24.0*u.hourangle 
+        if verbose: print('HA fixed',HA)
 
-    ZD = 90 - h1
+    ii = np.where(HA>0.*u.hourangle)[0][:]
+    if (len(ii) != 0):
+        AZ[ii] = 360.*u.deg - AZ[ii]
+        if verbose: print('AZ',AZ)
 
-    ZDc = np.array(ZD)
-    ii = np.where(ZD > 85.)[0][:]
+    ZD = 90.*u.deg - h1
+    if verbose: print('ZD',ZD)
+
+    ZDcopy = copy.deepcopy(ZD)
+    ii = np.where(ZD > 85.*u.deg)[0][:]
     if (len(ii) != 0): 
-        ZDc[ii]=85.0
+        ZDcopy[ii]=85.0*u.deg
+        if verbose: print('ZDcopy fixed',ZDcopy)
 
-    ZD = ZD - 0.00452 * 800.0 * np.tan(ZDc/degrad)/(273.0 + 10.0)
+    ZD = ZD - 0.00452 * 800.0 * np.tan(ZDcopy)/(273.0 + 10.0)*u.deg
+    
+    if verbose: print('ZD final',ZD)
 
     return ZD,HA,AZ
+
 
 
 
