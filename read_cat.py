@@ -4,7 +4,7 @@ import re
 class Catalog(object):
 
     """
-    Rough version of a container class for parsing catalog and storing information.
+    Rough version of a container class for storing catalog information.
     
     Attribute naming convention: lowercase column headers w/ underscores (eg.'Obs. Status'=obs_status).
 
@@ -16,13 +16,14 @@ class Catalog(object):
 
         cattext = []
         with open(otfile, 'r') as readcattext: #read file into memory. 
+            #[print(line.split('\t')) for line in readcattext]
             [cattext.append(line.split('\t')) for line in readcattext] #Split lines where tabs ('\t') are found.
             readcattext.close()
 
         names = np.array(cattext[8])
         obsall = np.array(cattext[10:])
 
-        #print('\notcat attribute names...')
+        #print('\notcat attribute names...',names)
         existing_names = []
         for i in range(0,len(names)):
             #remove special charaters, trim ends of string, replace whitespace with underscore
