@@ -16,7 +16,7 @@ def amplot(obslist,plan,prog_status):
             ii = np.where(plan['isel']==iimax)[0][:]
             np.append(ii,np.amax(ii)+1)
             temp = plan['UT'][ii]
-            # print('Plotting: ',prog_status['obs_id'][iimax])
+            # print('Plotting: ',prog_status.obs_id[iimax])
             plt.plot_date(plan['UT'].plot_date,obslist[iimax]['AM'],linestyle='-',linewidth=thn,color='black',markersize=0)
             plt.plot_date(plan['UT'][ii].plot_date,obslist[iimax]['AM'][ii],linestyle='-',linewidth=thk,markersize=0)
 
