@@ -106,7 +106,6 @@ def calc_weights(i_day,i_obs,n_obs,otcat,site,prog_status,cond,actual_cond,\
 
 
 
-
 #   =================================== Get time dependent quanitites for Sun & Moon ==================================================   
 
     if verbose: print('\nComputing moon data...')
@@ -367,9 +366,6 @@ def calc_weights(i_day,i_obs,n_obs,otcat,site,prog_status,cond,actual_cond,\
         else:
             obslist[i]['weight'] = np.zeros(n_timesteps)
 
-
-
-
         #   ===================== Check observation windows =======================
 
         nttime = np.int(np.round(ttime/dt)) #get number of time steps needed for observation
@@ -386,6 +382,7 @@ def calc_weights(i_day,i_obs,n_obs,otcat,site,prog_status,cond,actual_cond,\
             
             obslist[i]['iobswin'] = [ii[0],ii[-1]]
             obslist[i]['wmax'] = obslist[i]['weight'][i_wmax]
+
         else:
             obslist[i]['iobswin'] = [-1,-1]
             obslist[i]['wmax'] = -1

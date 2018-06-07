@@ -67,22 +67,28 @@ def obsweight(cond, dec, AM, HA, AZ, band, user_prior, status, latitude,\
      #decrease weight if conditions are better than requested iq,cc.
      # *effectively drop one band if IQ or CC are better than needed
      # and not likely to lose target, need to make this wavelen. dep. 
-     better_iq = acond['iq']<cond['iq']
-     better_cc = acond['cc']<cond['cc']
-
      if verbose: 
+          better_iq = acond['iq']<cond['iq']
+          better_cc = acond['cc']<cond['cc']
           print('iq better than required',better_iq)
           print('cc better than required',better_cc)
 
-     i_better_cond = np.where(np.logical_or(better_iq,better_cc))[0][:]
-     if len(i_better_cond)!=0:
-          cmatch[i_better_cond] = cmatch[i_better_cond] * 0.75
+     i_better_iq = np.where(acond['iq']<cond['iq'])[0][:]
+     if len(i_better_iq)!=0:
+          cmatch[i_better_iq] = cmatch[i_better_iq] * 0.75
+
+     i_better_cc = np.where(acond['cc']<cond['cc'])[0][:]
+     if len(i_better_cc)!=0:
+          cmatch[i_better_cc] = cmatch[i_better_cc] * 0.75
 
      if verbose: print('cmatch',cmatch)
      
      # Compute single weight representative of conditions 
      twcond = (1./cond['iq'])**3 + (1./cond['cc'])**3 + (1./cond['bg'])**3 + (1./cond['wv'])**3
-     if verbose: print('twcond',twcond)
+     
+     if verbose: 
+          print('wiq,wcc,wbg,wwv',(1./cond['iq'])**3, (1./cond['cc'])**3, (1./cond['bg'])**3, (1./cond['wv'])**3)
+          print('twcond',twcond)
 
      # ======================== Airmass ========================
      i_bad_AM = np.where(AM>2.)[0][:]
