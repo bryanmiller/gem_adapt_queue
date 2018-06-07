@@ -40,7 +40,7 @@ def priority_scheduler(i_obs, n_obs, obslist, plan, prog_status, otcat):
 
             for i in np.arange(n_obs):
                 if (len(ii) >= 2):
-                    if verbose: print('obs. weights:',obslist[i]['weight'][iint])
+                    if verbose: print('i, obs. weights:',i,obslist[i]['weight'][iint])
                     i_wmax = np.argmax(obslist[i]['weight'][iint])+iint[0]
                     wmax = obslist[i]['weight'][i_wmax]
                 else:
@@ -97,6 +97,8 @@ def priority_scheduler(i_obs, n_obs, obslist, plan, prog_status, otcat):
                     print('iend',iend)
                     print('ttime',ttime)
                     print('nttime',nttime)
+                    print('nobswin',nobswin)
+                    print('nminuse',nminuse)
 
         if iimax == -1:
             plan['isel'][iint] = -2
