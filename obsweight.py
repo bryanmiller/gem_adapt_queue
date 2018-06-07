@@ -30,7 +30,7 @@ def obsweight(cond, dec, AM, HA, AZ, band, user_prior, status, latitude,\
      """
 
      # if acond==None: acond=[0.,0.,0.,0.]
-     if wind==None: wind=[0.,0.]
+     if wind==None: wind=[0.*u.m/u.s,0.*u.deg]
      if wra==None: wra=1.0
      if starttime==None: starttime=17.0
 
@@ -40,8 +40,9 @@ def obsweight(cond, dec, AM, HA, AZ, band, user_prior, status, latitude,\
      wam = np.ones(nt)
      wwind = np.ones(nt)
      
-     # print(cond)
-     # print(acond)
+     if verbose:
+          print(cond)
+          print(acond)
 
      # ======================== Conditions comparison ========================
      # Return 0 weight if requested conditions worse than actual.
@@ -49,27 +50,44 @@ def obsweight(cond, dec, AM, HA, AZ, band, user_prior, status, latitude,\
      bad_cc = acond['cc']>cond['cc']
      bad_bg = acond['bg']>cond['bg']
      bad_wv = acond['wv']>cond['wv']
+
      i_bad_cond = np.where(np.logical_or(np.logical_or(bad_iq,bad_cc),\
                          np.logical_or(bad_bg,bad_wv)))[0][:]
+
+     if verbose:
+          print('iq worse than required',bad_iq)
+          print('cc worse than required',bad_cc)
+          print('bg worse than required',bad_bg)
+          print('wv worse than required',bad_wv)
+          print('i_bad_cond',i_bad_cond)
+     
+
      cmatch[i_bad_cond] = 0.
 
-     #decrease weight if conditions are better than requested iq,cc. 
+     #decrease weight if conditions are better than requested iq,cc.
+     # *effectively drop one band if IQ or CC are better than needed
+     # and not likely to lose target, need to make this wavelen. dep. 
      better_iq = acond['iq']<cond['iq']
-     better_cc = acond['cc']>cond['cc']
-     i_better_cond = np.where(np.logical_or(better_iq,better_cc))[0][:]
-     cmatch[i_better_cond] = cmatch[i_better_cond] * 0.75
+     better_cc = acond['cc']<cond['cc']
 
-     # print(bad_iq),print(bad_cc),print(bad_bg),print(bad_wv),print(i_bad_cond),print(i_better_cond),print(cmatch)
+     if verbose: 
+          print('iq better than required',better_iq)
+          print('cc better than required',better_cc)
+
+     i_better_cond = np.where(np.logical_or(better_iq,better_cc))[0][:]
+     if len(i_better_cond)!=0:
+          cmatch[i_better_cond] = cmatch[i_better_cond] * 0.75
+
+     if verbose: print('cmatch',cmatch)
      
      # Compute single weight representative of conditions 
      twcond = (1./cond['iq'])**3 + (1./cond['cc'])**3 + (1./cond['bg'])**3 + (1./cond['wv'])**3
-     # print('twcond',twcond)
+     if verbose: print('twcond',twcond)
 
      # ======================== Airmass ========================
      i_bad_AM = np.where(AM>2.)[0][:]
      wam[i_bad_AM] = 0.
-     # print(AM)
-     # print(wam)
+
 
 
      # ======================== Elevation constraint ========================
@@ -78,10 +96,10 @@ def obsweight(cond, dec, AM, HA, AZ, band, user_prior, status, latitude,\
      # elev['min']=-5
      # elev['max']=5
      
-     # print(elev)
-     # print('wam',wam)
-     # print('AM',AM)
-     # print('HA',HA)
+     if verbose:
+          print('AM',AM)
+          print('HA',HA)
+
      if elev['type']=='Airmass':
           i_bad_elev = np.where(np.logical_or(AM<elev['min'],AM>elev['max']))[0][:]
           wam[i_bad_elev] = 0.
@@ -90,21 +108,17 @@ def obsweight(cond, dec, AM, HA, AZ, band, user_prior, status, latitude,\
           wam[i_bad_elev] = 0.
      else:
           None
-     # print(wam)
+
+     if verbose: print('wam',wam)
 
 
      # ======================== Wind ========================
      # Wind, do not point within 20deg of wind if over limit
-     wind = np.zeros(1,dtype={'names':('speed','dir'),'formats':('f8','f8')})
-     wind['speed'] = 4.e3 #in m/h
-     wind['dir']= 30. #in degrees
-
      
-     ii = np.where(np.logical_and(wind['speed']>10.e3,abs(AZ - wind['dir']) < 20.))[0][:]
+     ii = np.where(np.logical_and(wind[0]>10.e3*u.m/u.s,abs(AZ - wind[1]) < 20.*u.deg))[0][:]
      wwind[ii] = 0.
-     # print('wind',wind)
-     # print('AZ',AZ)
-     # print('wwind',wwind)
+     
+     if verbose: print('wwind',wwind)
 
 
      # ======================== Visibility ========================
@@ -112,12 +126,8 @@ def obsweight(cond, dec, AM, HA, AZ, band, user_prior, status, latitude,\
           decdiff = latitude-dec
      else:
           decdiff = dec-latitude
-     # print('lat',latitude)
-     # print('dec',dec)
-     # print('decdiff',decdiff)
-     # print('HA',HA)
      
-     declim=[90.,-30.,-45.,-50,-90.]
+     declim=[90.,-30.,-45.,-50,-90.]*u.deg
      wval=[1.0,1.3,1.6,2.0]
      wdec=0.
      for i in np.arange(4):
@@ -125,27 +135,31 @@ def obsweight(cond, dec, AM, HA, AZ, band, user_prior, status, latitude,\
                wdec = wval[i]
           else:
                None
-     #print('wdec',wdec)
+     if verbose: print('wdec',wdec)
 
      # HA - if within -1hr of transit at  twilight it gets higher weight
-     if np.logical_and(abs(decdiff)<40.,starttime>12.):
+     if np.logical_and(abs(decdiff)<40.*u.deg,starttime>12.):
           c = wdec * np.array([3.,0.1,-0.06]) #weighted to slightly positive HA
      else:
           c = wdec * np.array([3.,0.,-0.08]) #weighted to 0 HA if Xmin > 1.3
-     wha = c[0] + c[1]*HA + c[2]*HA**2
+     wha = c[0] + c[1]*HA/(u.hourangle) + c[2]*HA**2/(u.hourangle**2)
      ii = np.where(wha<=0)[0][:]
      wha[ii] = 0.
-     # print('wha',wha)
+          
      
-     if np.amin(HA) >= -1.:
+     if np.amin(HA) >= -1.*u.hourangle:
           wha = wha*1.5
-     # print('min HA',np.amin(HA))
-     # print('wha',wha)
+          if verbose: print('multiplied wha by 1.5')
+     
+     if verbose: 
+          print('wha',wha)
+          print('min HA',np.amin(HA))
+          
 
 
      # ======================== Band ========================
-     wband = (4. - band) * 1000
-     # print('wband',wband)
+     wband = (4. - np.int(band)) * 1000
+     if verbose: print('wband',wband)
 
 
      # ======================== User Priority ========================
@@ -159,7 +173,8 @@ def obsweight(cond, dec, AM, HA, AZ, band, user_prior, status, latitude,\
           wprior = 0.
      else:
           wprior = 0.
-     # print('wprior',wprior)
+     
+     if verbose: print('wprior',wprior)
 
 
      # ======================== Completion Status ========================
@@ -167,38 +182,27 @@ def obsweight(cond, dec, AM, HA, AZ, band, user_prior, status, latitude,\
      if status >= 1.0:
           wcplt = 0.
           
-     # print('wcplt',wcplt)
+     if verbose: print('wcplt',wcplt)
 
      wstatus = 1.
      if status > 0.:
           wstatus = wstatus * 1.5
      if otime > 0.:
           wstatus = 2.0
-     # print('wstatus',wstatus)
+     
+     if verbose: print('wstatus',wstatus)
 
 
 
      # ======================== Partner Balance ========================
      wbal = 0.
 
+     if verbose: print('wbal',wbal)
+
 
      # ======================== Total weight ========================
      weight = (twcond + wstatus * wha + wband + wprior + wbal +wra) * cmatch * wam * wcplt * wwind
-     # print('Total weight',weight)
+     
+     if verbose: print('Total weight',weight)
 
-     if verbose:
-          print('cond',cond)
-          print('acond',acond[0])
-          print('twcond',twcond)
-          print('wdec',wdec)
-          print('wband',wband)
-          print('wprior',wprior)
-          print('wcplt',wcplt)
-          print('wstatus',wstatus)
-          print('wbal',wbal)
-          print('cmatch',cmatch)
-          print('wam',wam)
-          print('wwind',wwind)
-          print('wha',wha)
-          print('Total weight: ',weight)
      return weight
