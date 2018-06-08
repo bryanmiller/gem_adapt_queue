@@ -9,6 +9,7 @@ __all__ = ["Gemini_classes"]
 
 
 
+
 def conv_time(array_times):
     """
     Convert time string from hh:mm:ss.ss to hour quantity

@@ -18,11 +18,13 @@ def amplot(obslist,plan,prog_status):
             temp = plan['UT'][ii]
             # print('Plotting: ',prog_status.obs_id[iimax])
             plt.plot_date(plan['UT'].plot_date,obslist[iimax]['AM'],linestyle='-',linewidth=thn,color='black',markersize=0)
-            plt.plot_date(plan['UT'][ii].plot_date,obslist[iimax]['AM'][ii],linestyle='-',linewidth=thk,markersize=0)
+            plt.plot_date(plan['UT'][ii].plot_date,obslist[iimax]['AM'][ii],linestyle='-',linewidth=thk,markersize=0,label=obslist[iimax]['id'][-10:])
 
+    plt.title(plan['date']+': '+plan['type'])
     plt.ylim(2.1, 0.9)
     plt.ylabel('Airmass')
     plt.xlabel('UTC')
-    plt.show()
+    plt.legend(loc=8,ncol=4,fontsize=8,markerscale=0.5)
+    plt.savefig(plan['date']+'_amplot.png')
     
     return
