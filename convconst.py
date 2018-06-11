@@ -33,11 +33,12 @@ def convelev(elev_const):
 def convcond(iq,cc,bg,wv):
     """
     Convert weather condition contraints found in the catalog 
-    to floats ranging from 0-1.
-    Conditions 'Any' or 'null' are set to 1.
-    Percentage conditions are converted to decimals.
+    to decimal values in range [0,1].
+    Conditions 'Any' or 'null' are assigned 1.
+    Percentages converted to decimals.
     Image qualities of 70% are set to 50%.
-    Water vapour values of 50% are set to 20%."""
+    Water vapour values of 50% are set to 20%.
+    """
 
     #============ image quality =============
     for i in range(0,len(iq)):

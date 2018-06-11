@@ -10,7 +10,6 @@ def priority_scheduler(i_obs, n_obs, obslist, plan, prog_status, otcat):
     dt = plan['dt']
     n_timesteps = plan['n_timesteps']
     ntcal = 0
-    plan['isel'][:] = -1
     nsel = 0
     ii = np.where(plan['isel'] == -1)[0][:]
     

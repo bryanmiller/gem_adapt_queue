@@ -2,12 +2,16 @@ import time as t
 timer = t.time()
 
 import argparse
+import random
 import re
 import numpy as np
 import textwrap
 import astropy.units as u
 from astroplan import (download_IERS_A,Observer)
 from astropy import (coordinates,time)
+
+# gqpt packages
+import condgen
 import convconst
 from calc_weights import calc_weights
 from gemini_classes import Gcatalog2018,Gprogstatus,Gcatfile,Gcondition,Gelevconst
@@ -15,18 +19,18 @@ from amplot import amplot
 from printplan import printplan
 from gemini_schedulers import priority_scheduler
 
-print('Time to import: ',t.time()-timer)
+print('\nTime to import packages: ',t.time()-timer)
 timer = t.time() #reset timer
 
-
+seed = random.seed(1000)
 
 
 #   =============================================== Read and command line inputs =============================================================
 
 verbose = False
 
-aprint = '\t{0:<30s}{1}' #print two strings
-bprint = '\t{0:<30s}{1:<.4f}' #print string and number
+aprint = '\t{0:<35s}{1}' #print two strings
+bprint = '\t{0:<35s}{1:<.4f}' #print string and number
 
 parser = argparse.ArgumentParser(prog='gqpt.py',
                                      formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -38,7 +42,8 @@ parser = argparse.ArgumentParser(prog='gqpt.py',
                         otfile                  OT catalog filename.
 
                         -o   --observatory      Observatory site [DEFAULT='gemini_south']. Accepts the following:
-                                                'gemini_north','MK'(Mauna Kea),'gemini_south','CP'(Cerro Pachon).
+                                                1. 'gemini_north' (or 'MK' for Mauna Kea)
+                                                2. 'gemini_south' (or 'CP' for Cerro Pachon)
                         
                         -s   --startdate        Start date 'YYYY-MM-DD' [DEFAULT=tonight]
                         
@@ -51,6 +56,9 @@ parser = argparse.ArgumentParser(prog='gqpt.py',
                         -i   --iq               Image quality constraint [DEFAULT=70]
                         -c   --cc               Cloud cover constraint   [DEFAULT=50]
                         -w   --wv               Water vapor constraint   [DEFAULT=Any]
+
+                        -d   --distribution     Generate conditions from distribution [DEFAULT=False]. Accepts the following:
+                                                1. 'gaussian' (or 'g')  
 
                         -u   --update           Download up-to-date IERS(International Earth Rotation and Reference Systems).
 
@@ -86,6 +94,9 @@ parser.add_argument('-c', '--cc',\
 parser.add_argument('-w', '--wv',\
                     default='Any')
 
+parser.add_argument('-d', '--distribution',\
+                    default=None)
+
 parser.add_argument('-u', '--update',\
                     action='store_true',\
                     default=False)
@@ -96,6 +107,7 @@ site_name = parse.observatory
 startdate = parse.startdate
 enddate = parse.enddate
 dst = parse.dst
+distribution = parse.distribution
 update = parse.update
 
 if update: #download up to date International Earth Rotation and Reference Systems data
@@ -106,19 +118,29 @@ if update: #download up to date International Earth Rotation and Reference Syste
 
 #   ========================================= Input conditions =====================================================
 
-#Format condition constraint input
-if parse.iq == 'Any':
-    iq = parse.iq
+# Assign condition distribution generator function if selected
+conddist = False
+if distribution!=None:
+    conddist = True
+    if distribution=='gaussian' or distribution=='g':
+        cond_func = condgen.gauss_cond
+    else:
+        print('\n\''+str(distribution)+'\' not a valid condition distribution type. Refer to program guide in help using \'-h\' and try again.')
+        exit()
 else:
-    iq = parse.iq[0:2] + '%'
-if parse.cc == 'Any':
-    cc = parse.cc
-else:
-    cc = parse.cc[0:2] + '%'
-if parse.wv == 'Any':
-    wv = parse.wv
-else:
-    wv = parse.wv[0:2] + '%'
+    # Format condition constraint input if random distribution not specified.
+    if parse.iq == 'Any':
+        iq = parse.iq
+    else:
+        iq = parse.iq[0:2] + '%'
+    if parse.cc == 'Any':
+        cc = parse.cc
+    else:
+        cc = parse.cc[0:2] + '%'
+    if parse.wv == 'Any':
+        wv = parse.wv
+    else:
+        wv = parse.wv[0:2] + '%'
 
 
 
@@ -142,8 +164,15 @@ else:
     print('Input error: Could not determine observer location and timezone. Allowed inputs are \'gemini_south\', \'CP\'(Cerro Pachon),\'gemini_north\', or \'MK\'(Mauna Kea).)')
     exit()
 
-site = Observer.at_site(site_name) #initialize Observer object
+site = Observer.at_site(site_name) #create Observer object for observatory site
 #can add timezone=timezone_name later if desired (useful if pytz objects are ever used)
+
+# add horizon info to site object
+sun_horiz = -.83*u.degree
+equat_radius = 6378137.*u.m
+site_horiz = -np.sqrt(2.*site.location.height/equat_radius)*(180./np.pi)*u.degree
+setattr(site,'horiz',site_horiz)
+setattr(site,'sun_horiz',-.83*u.degree)
 
 print('')
 print(aprint.format('Site: ',site.name))
@@ -262,15 +291,20 @@ if verbose:
 
 #   ========================================================= Begin Queueing ======================================================================
 
-print('\nTime to read and prepare catalog data: ',t.time()-timer)
+print('\nTime to prepare catalog data: ',t.time()-timer)
 
 for i_day in day_nums: #cycle through observation days
 
-    night_start = local_start + i_day
-    night_start_utc = night_start - utc_to_local
+    night_start = local_start + i_day # time object for 18:00 local on current night
+    night_start_utc = night_start - utc_to_local # time object for 18:00 UTC on current night
     
     print('\n\t___________________________ Night of '+str(night_start)[0:10]+' _______________________________')
 
+    if conddist==True:
+        iq,cc,wv = cond_func()
+
+    print('')
+    print(aprint.format('Sky conditions (iq,cc,wv): ','{0} , {1} , {2}'.format(iq,cc,wv)))
     actual_cond = [iq,cc,'Any',wv]
 
     obslist, plan, prog_status = calc_weights(i_day=i_day, i_obs=i_obs,\

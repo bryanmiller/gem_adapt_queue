@@ -25,12 +25,12 @@ def printplan(i_obs,obslist,plan,prog_status,otcat,time_diff_utc):
         obs_index = int(sel_obs[ri[time_index]]) #get obs obs_index corresponding to plan['isel']
         
         n_slots = 1
-        while True:
+        while (time_index + (n_slots)) < len(ri):
             if sel_obs[ri[time_index + (n_slots)]] == obs_index:
                 n_slots = n_slots + 1
             else:
                 break
-
+            
         if verbose:
             print('time_index',time_index)
             print('obs_index',obs_index)
