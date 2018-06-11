@@ -34,16 +34,10 @@ def calc_weights(i_day,i_obs,n_obs,otcat,site,prog_status,cond,actual_cond,\
 
 
 #   =================================== Get required times/quantities for current night ==================================================
-    
-    sun_horiz = -.83*u.degree
-    equat_radius = 6378137.*u.m
-
-    #horizon angle for the observation site
-    site_horiz = -np.sqrt(2.*site.location.height/equat_radius)*(180./np.pi)*u.degree
 
     #sunset/sunrise times
-    sunset_tonight = site.sun_set_time(utc_time,which='nearest',horizon=sun_horiz-site_horiz)
-    sunrise_tonight = site.sun_rise_time(utc_time,which='next',horizon=sun_horiz-site_horiz)
+    sunset_tonight = site.sun_set_time(utc_time,which='nearest',horizon=site.sun_horiz-site.horiz)
+    sunrise_tonight = site.sun_rise_time(utc_time,which='next',horizon=site.sun_horiz-site.horiz)
     
 
     #nautical twilight times (sun at -12 degrees)
@@ -51,25 +45,25 @@ def calc_weights(i_day,i_obs,n_obs,otcat,site,prog_status,cond,actual_cond,\
     morning_twilight = site.twilight_morning_nautical(utc_time,which='next')
     
 
-    #utc time at local midnight 
+    #utc time at solar midnight 
     #utc_midnight = time.Time(str(utc_time)[0:10]+' 00:00:00.000')+1.*u.d #get utc midnight
     solar_midnight = site.midnight(utc_time,which='nearest') #get local midnight in utc time
     
 
-    #get location of moon at local midnight
+    #get location of moon at solar midnight
     moon_at_midnight = coordinates.get_moon(solar_midnight, location=site.location, ephemeris=None)
     moon_fraction = site.moon_illumination(solar_midnight)
     moon_phase = site.moon_phase(solar_midnight)
     
 
     #moonrise/moonset times
-    moonrise_tonight = site.moon_rise_time(utc_time,which='nearest',horizon=sun_horiz-site_horiz)
-    moonset_tonight = site.moon_set_time(utc_time,which='next',horizon=sun_horiz-site_horiz)
+    moonrise_tonight = site.moon_rise_time(utc_time,which='nearest',horizon=site.sun_horiz-site.horiz)
+    moonset_tonight = site.moon_set_time(utc_time,which='next',horizon=site.sun_horiz-site.horiz)
     
 
     if verbose:
         print(fprint.format('Site: long,lat'),site.location.lon,site.location.lat)
-        print(fprint.format('Horizon angle: '),site_horiz)
+        print(fprint.format('Horizon angle: '),site.horiz)
 
     print('')    
     print(fprint.format('Solar midnight(UTC): '),solar_midnight.iso)  
@@ -178,7 +172,7 @@ def calc_weights(i_day,i_obs,n_obs,otcat,site,prog_status,cond,actual_cond,\
             'twieven':evening_twilight,\
             'twimorn':morning_twilight,\
             'sZD':sZD,\
-            'isel':np.ones(n_timesteps)}
+            'isel':np.full(n_timesteps,-1)}
 
 
     # create list of observation dictionaries for current plan.
@@ -231,7 +225,7 @@ def calc_weights(i_day,i_obs,n_obs,otcat,site,prog_status,cond,actual_cond,\
         print('histogram bin indices',bin_nums)
 
 
-    # Sum total number of obs. hours in 30deg bins. Divide by mean
+    # Sum total number of obs. hours in 30deg bins. Divide by mean to get wra weights
     hhra = np.zeros(12)*u.h
     for i in range(0,12):
         ii = np.where(bin_nums==i)[0][:]
@@ -362,7 +356,7 @@ def calc_weights(i_day,i_obs,n_obs,otcat,site,prog_status,cond,actual_cond,\
             obslist[i]['weight'] = obsweight(cond=temp_cond,dec=obslist[i]['dec'],AM=obslist[i]['AM'],\
                                             HA=obslist[i]['HA'],AZ=obslist[i]['AZ'],band=prog_status.band[i],\
                                             user_prior=otcat.user_prior[i_obs[i]], status=0.,latitude=site.location.lat,\
-                                            acond=acond,wind=None,otime=0.,wra=None,elev=temp_elev,starttime=None)
+                                            acond=acond,wind=None,otime=0.,wra=hhra[ii],elev=temp_elev,starttime=None)
         else:
             obslist[i]['weight'] = np.zeros(n_timesteps)
 
