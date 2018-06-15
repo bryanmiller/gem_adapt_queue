@@ -3,7 +3,7 @@ import numpy as np
 def intervals(int_array):
 
     # find the number and properties of contiguous intervals in a
-    # vector of indicies
+    # vector of indices
 
     ni = len(int_array)
     cvec = np.zeros(ni,dtype=int)

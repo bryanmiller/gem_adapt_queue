@@ -30,12 +30,17 @@ def calc_ZDHA(lst,longitude,latitude,ra,dec):
     ii = np.where(HA < -12.*u.hourangle)[0][:]
     if (len(ii) != 0):
         HA[ii] = HA[ii] + 24.0*u.hourangle 
-        if verbose: print('HA fixed',HA)
+        if verbose: print('HA < -12 fixed',HA)
+
+    ii = np.where(HA > 12.0 * u.hourangle)[0][:]
+    if (len(ii) != 0):
+        HA[ii] = HA[ii] - 24. * u.hourangle
+        if verbose: print('HA > 12 fixed', HA)
 
     ii = np.where(HA>0.*u.hourangle)[0][:]
     if (len(ii) != 0):
         AZ[ii] = 360.*u.deg - AZ[ii]
-        if verbose: print('AZ',AZ)
+        if verbose: print('AZ fixed',AZ)
 
     ZD = 90.*u.deg - h1
     if verbose: print('ZD',ZD)
