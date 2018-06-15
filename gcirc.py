@@ -7,8 +7,11 @@ import astropy.units as u
 
 def gcirc(ra1,dec1,ra2,dec2):
     """Computes angular distance between two points.  
-    Provide input coordinates in degrees as unitless floats.
-    Function will return degrees"""
+    
+    Parameter
+    ---------
+
+    """
 
     #more rigorous great circle angular distance calculation.
     del_dec_div2 = ( dec2 - dec1 ) / (2.0)

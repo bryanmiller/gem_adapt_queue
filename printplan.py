@@ -1,52 +1,39 @@
 import numpy as np
 import astropy
 
-def printplan(i_obs,obslist,plan,prog_status,otcat,time_diff_utc):
+def printplan(plan,obs,timeinfo,targetinfo):
     
     verbose = False
 
-    sprint = '\t{0:20.20s}{1:14.12s}{2:7.5s}{3:12.8}{4:12.8}{5:8.6s}{6:8.6s}{7:8.6s}{8:8.6s}' 
-    fprint = '\t{0:20.20s}{1:14.12s}{2:7.5s}{3:12.8}{4:12.8}{5:<8.4s}{6:<8.2f}{7:<8.2f}{8:<8.5s}'
-    print('\n\tPlan type: '+plan['type']+' ')
-    print(sprint.format('Obs. ID','Target','Instr','Local','UT','LST','Hrs','AirM','HA'))
-    print(sprint.format('-------','------','-----','-----','--------','---','---','----','--'))
+    sprint = '\t{0:14.12s}{1:12.10s}{2:7.5s}{3:10.8s}{4:8.6s}{5:10.8s}{6:10.8s}{7:8.6s}{8:8.6s}{9:8.6s}'
+    # print('\n\tPlan type: '+plan['type']+' ')
+    print('\n\t'+plan.type+' schedule:')
+    print(sprint.format('Obs. ID','Target','Instr','UTC','LST','Start','End','Hrs','AM','HA'))
+    print(sprint.format('-------','------','-----','---','---','-----','---','---','--','--'))
 
+    order = np.argsort(plan.i_start)
 
-    sel_obs,ii,ri,count = np.unique(plan['isel'],return_index=True, return_inverse=True, return_counts=True)
-    ii_sort = np.sort(ii)
-
+    # sel_obs,ii,ri,count = np.unique(plan,return_index=True, return_inverse=True, return_counts=True)
+    # ii_sort = np.sort(ii)
     if verbose:
-        print(sel_obs,ii,ri,count)
-        print('ii_sort',ii_sort)
+        # print(sel_obs,ii,ri,count)
+        print('order',order)
 
-    for i in range(0,len(ii_sort)):
-        
-        time_index = int(ii_sort[i]) #get obs_index of next obs start time
-        obs_index = int(sel_obs[ri[time_index]]) #get obs obs_index corresponding to plan['isel']
-        
-        n_slots = 1
-        while (time_index + (n_slots)) < len(ri):
-            if sel_obs[ri[time_index + (n_slots)]] == obs_index:
-                n_slots = n_slots + 1
-            else:
-                break
-            
-        if verbose:
-            print('time_index',time_index)
-            print('obs_index',obs_index)
+    for i in order:
 
-        if obs_index>0: #Do not print info for empty time blocks
+        i_obs = np.where(obs.obs_id==plan.obs_id[i])[0][0]
 
-            obs_name = prog_status.obs_id[obs_index]
-            targ_name = prog_status.target[obs_index]
-            inst_name = otcat.inst[i_obs[obs_index]]
-            local_time = str((plan['UT'][time_index]+time_diff_utc).iso)[11:-4]
-            lst_time = plan['lst'][time_index]
-            utc_start = str(plan['UT'][time_index].iso)[11:-4]
-            airmass = obslist[obs_index]['AM'][time_index]
-            HA = '{:.2f}'.format(obslist[obs_index]['HA'][time_index])
-            duration = n_slots * 1/10
-            print(fprint.format(obs_name,targ_name,inst_name,local_time,utc_start,lst_time,duration,airmass,HA))
-            # print(type(local_time),type(lst_time),type(utc_start),type(airmass),type(HA))
+        obs_name = plan.obs_id[i][-10:]
+        targ_name = obs.target[i_obs]
+        inst_name = obs.inst[i_obs]
+        utc_start = str(timeinfo.utc[plan.i_start[i]].iso)[11:19]
+        lst_start = str(timeinfo.lst[plan.i_start[i]])
+        local_start = str((timeinfo.local[plan.i_start[i]]).iso)[11:19]
+        local_end = str((timeinfo.local[plan.i_start[i]]).iso)[11:19]
+        airmass = str('{:.2f}'.format(targetinfo[i_obs].AM[plan.i_start[i]]))
+        HA = str('{:.2f}'.format(targetinfo[i_obs].HA[plan.i_start[i]]))
+        hours = str('{:.2f}'.format(plan.hours[i]))
+        print(sprint.format(obs_name,targ_name,inst_name,utc_start,lst_start,
+                            local_start,local_end,hours,airmass,HA))
 
     return
