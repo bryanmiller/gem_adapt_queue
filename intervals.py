@@ -17,3 +17,18 @@ def intervals(int_array):
     indx = np.digitize(cvec,bins=np.arange(ni)+1)
     
     return indx
+
+if __name__=='__main__':
+    print('\nTest intervals.py...')
+    print('Expected output: indices of first interval of -1\'s from array')
+
+    int_array = np.array([0, 0, 0, 0, -1, -1, -1, -1, 2, 2, 2, 2, 3, 3, 3, 3, 2, 2, 2, 2, -1, -1, -1, -1], dtype=int)
+    print('input:', int_array)
+
+    negones = np.where(int_array==-1)[0][:]
+    ii = np.where(intervals(negones)==1)[0][:]
+    first = negones[ii]
+    print('output: ',first)
+
+    assert((first == np.array([4,5,6,7])).all())
+    print('Test successful!')
