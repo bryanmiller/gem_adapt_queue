@@ -663,7 +663,7 @@ class TargetInfo(object):
         """
 
         class_name = self.__class__.__name__
-        attr_names = ['name','ra','dec','ZD','HA','AZ','AM','mdist','vsb','weight','iobswin']
+        attr_names = ['name','ra','dec','ZD','HA','AZ','AM','mdist','vsb','bg','weight']
         attr_values = [getattr(self, attr) for attr in attr_names]
         attributes_strings = []
         for name, value in zip(attr_names, attr_values):

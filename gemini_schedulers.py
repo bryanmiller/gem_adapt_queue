@@ -3,6 +3,109 @@ import numpy as np
 import astropy.units as u
 from intervals import intervals
 
+def _optimize_plan(plan, istart, targetinfo):
+
+    verbose = False
+
+    newplan = np.full(len(plan), -2)
+
+    id = np.unique(plan)
+    if len(id)==0: return
+
+    nid = np.zeros(len(id),dtype=int)
+    plan_weight = 0.
+
+    for i in range(0,len(id)): # get number of slots per obs. and sum plan weight
+        ii = np.where(plan == id[i])[0][:]
+        nid[i] = int(len(ii))
+        if id[i] >= 0:
+            if verbose: print('id, ii, weight: ',id[i],ii,targetinfo[id[i]].weight[ii])
+            plan_weight = plan_weight + sum(abs(targetinfo[id[i]].weight[ii]))
+
+    nt = len(plan)
+    i = 0
+    idsel = np.array(id)
+    while i < nt:
+        if plan[i] >= 0:
+            if verbose: print('i, idsel, nid: ', i, idsel, nid)
+            imax = -1
+            wmax = 0.
+            temp_wmax = 0.
+            idmax = 0.
+            for j in range(0, len(idsel)):
+                if idsel[j] >= 0:
+                    temp_wmax = abs(targetinfo[idsel[j]].weight[i])
+                    if temp_wmax > wmax:
+                        wmax = temp_wmax
+                        imax = j
+                        idmax = idsel[j]
+            if verbose: print('wmax, imax, idmax: ', wmax, imax, idmax)
+            if wmax > 0.:
+                if (i+nid[imax] <= nt):
+                    newplan[i:(i+nid[imax])] = idmax
+                    i = i + nid[imax]
+                else:
+                    newplan[i:nt] = idmax
+                    i = nt
+                if verbose: print('nid[imax]: ',nid[imax])
+                if verbose: print('delete j from id: ', imax, idsel)
+                if verbose: print('newplan: ', newplan)
+                idsel = np.delete(idsel, imax, None)
+                nid = np.delete(nid, imax, None)
+            else:
+                i = i+1
+        else:
+            i = i+1
+
+    if (newplan == plan).all():
+        return plan
+
+    newplan_weight = 0.
+    new_nid = np.zeros(len(id))
+    for i in range(0, len(id)):  # get number of slots per obs. and sum plan weight
+        ii = np.where(newplan == id[i])[0][:]
+        new_nid[i] = int(len(ii))
+        if id[i] >= 0:
+            newplan_weight = newplan_weight + sum(abs(targetinfo[id[i]].weight[ii]))
+
+    if verbose:
+        print('Original plan: ',plan)
+        print('Weight: ', plan_weight)
+        print('New plan: ', newplan)
+        print('Weight: ', newplan_weight)
+
+    if newplan_weight >= plan_weight:
+        return newplan
+    else:
+        return plan
+
+
+def _plan_details(plan, targetinfo):
+
+    # get stats while building final plan
+    obslist = []  # observation names
+    i_start = []  # observing index start
+    i_end = []  # observing index end
+
+    i = 0
+    nt = len(plan)
+    while i < nt:
+        if plan[i] > 0:
+            n = 1
+            next = True
+            iobs = plan[i]  # current obs index in plan
+            obslist.append(targetinfo[iobs].name)
+            i_start.append(i)
+            while next:
+                if plan[i+1] != plan[i] and i <= nt:
+                    i_end.append(i)
+                    next = False
+                i = i + 1
+        else:
+            i = i+1
+    return obslist, np.array(i_start, dtype=int), np.array(i_end, dtype=int)
+
+
 
 class Gschedule(object):
 
@@ -94,19 +197,12 @@ class Gschedule(object):
             of scheduled observations updated
 
         """
+        verbose = False
+        schedule_order = False
 
         plantype = 'Priority'  # define plan type
         plan = np.full(timeinfo.nt, -1)
-        obslist = []
-        i_start = []
-        i_end = []
-        hours = []
-        cplt = []
-        tot_time = 0. * u.h
-        night_length = timeinfo.night_length
 
-        verbose = False
-        schedule_order = False
 
         dt = timeinfo.dt
         nt = timeinfo.nt
@@ -119,7 +215,7 @@ class Gschedule(object):
             if verbose: print('\nIteration: ',nsel+1)
 
             indx = intervals(ii)  # group adjacent time slots
-            iint = ii[np.where(indx==1)[0][:]]  # first interval of unscheduled times
+            iint = ii[np.where(indx == 1)[0][:]]  # first interval of unscheduled times
 
             if verbose:
                 print('ii:',ii)
@@ -295,13 +391,12 @@ class Gschedule(object):
                 # ii_obs = np.where(obs.obs_id == obs.prog_ref[iimax])[0][:]  # indices of obs. in same program
                 obs.comp_time[iimax] = obs.comp_time[iimax] + dt * ntmin / obs.tot_time[iimax]  # update comp_time
 
-                if obs.comp_time[iimax]>=1.:
+                if obs.comp_time[iimax]>=1.:  # completed observation
                     targetinfo[iimax].weight = targetinfo[iimax].weight * -1  # set all target weights to neg.
-                    cplt.append(True)
-                else:
+                else:  # incomplete observation
                     targetinfo[iimax].weight[jstart:jend+1] = targetinfo[iimax].weight[jstart:jend+1] * -1  # set scheduled target weights to neg.
-                    targetinfo[iimax].weight = targetinfo[iimax].weight * 1.5  # increase remaining weights.
-                    cplt.append(False)
+                    wpositive = np.where(targetinfo[iimax].weight >= 0)[0][:]
+                    targetinfo[iimax].weight[wpositive] = targetinfo[iimax].weight[wpositive] * 1.5  # increase remaining weights.
 
                 if verbose:
                     print('New obs. weights: ', targetinfo[iimax].weight)
@@ -322,16 +417,20 @@ class Gschedule(object):
                     print('\tScheduled: ',iimax,targetinfo[iimax].name,'from',timeinfo.utc[jstart].iso,'to',timeinfo.utc[jend].iso)
                     print(targetinfo[iimax].weight)
 
-                #update plan info and stats
-                obslist.append(targetinfo[iimax].name)
-                i_start.append(jstart)
-                i_end.append(jend)
-                hours.append(nttime*dt)
-                tot_time = tot_time + nttime*dt
+            ii = np.where(plan == -1)[0][:]  # get indices of remaining time slots
 
-            ii = np.where(plan == -1)[0][:]
-
-        # print('Runtime = ',t.time()-starttime)
+        # finalize plan and retrieve details
+        plan = _optimize_plan(plan, istart, targetinfo)  # Final plan
+        obslist, i_start, i_end = _plan_details(plan, targetinfo)  # plan details
+        hours = (i_end-i_start+1)*dt  # lengths of scheduled observations
+        ii = np.where(plan >= 0)[0][:] # scheduled time slots
+        tot_time = len(ii) * dt  # total scheduled time
+        night_length = timeinfo.night_length
+        cplt = np.full(len(obslist), False, dtype=bool)  # completion status of scheduled obs.
+        for i in range(0, len(i_start)):
+            print(plan[i_start[i]], obs.comp_time[plan[i_start[i]]])
+            if obs.comp_time[plan[i_start[i]]] >= 1.:
+                cplt[i] = True
 
         return cls(plantype=plantype, plan=plan, obslist=obslist, i_start=i_start, i_end=i_end, hours=hours,
                    cplt=cplt, tot_time=tot_time, night_length=night_length),obs

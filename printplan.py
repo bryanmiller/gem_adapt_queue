@@ -13,10 +13,7 @@ def printplan(plan,obs,timeinfo,targetinfo):
 
     order = np.argsort(plan.i_start)
 
-    # sel_obs,ii,ri,count = np.unique(plan,return_index=True, return_inverse=True, return_counts=True)
-    # ii_sort = np.sort(ii)
     if verbose:
-        # print(sel_obs,ii,ri,count)
         print('order',order)
 
     for i in order:
