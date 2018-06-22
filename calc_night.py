@@ -1,4 +1,5 @@
 import astropy.units as u
+from joblib import Parallel, delayed
 from astropy import (coordinates,time)
 from gemini_classes import TimeInfo,SunInfo,MoonInfo,TargetInfo
 
@@ -6,7 +7,15 @@ from gemini_classes import TimeInfo,SunInfo,MoonInfo,TargetInfo
 # starttime = t.time() # runtime clock
 # print('Runtime: ',t.time()-starttime) # runtime clock
 
+def _init_target(ra, dec, id, starttime, site, utc_times):
+    coord_j2000 = coordinates.SkyCoord(ra, dec, frame='icrs', unit=(u.deg, u.deg))
+    current_epoch = coord_j2000.transform_to(
+        coordinates.FK5(equinox='J' + str(starttime.jyear)))  # coordinate for current epoch
+    target = TargetInfo(site=site, utc_times=utc_times, name=id, ra=current_epoch.ra,
+                        dec=current_epoch.dec)  # initialize targetinfo class
+    return target
 
+@u.quantity_input(utc_to_local=u.h)
 def calc_night(obs,site,starttime,endtime=None,dt=0.1,utc_to_local=0.*u.h):
     
     """
@@ -53,37 +62,22 @@ def calc_night(obs,site,starttime,endtime=None,dt=0.1,utc_to_local=0.*u.h):
 
     verbose = False
 
-    n_obs = len(obs.obs_id) # number of observations in obs.
-
-    # Compute time info for the night
+    # Compute time info for observing window, then compute sun and moon values at times.
     timeinfo = TimeInfo(site=site,starttime=starttime,endtime=endtime,dt=dt,utc_to_local=utc_to_local)
-
-    # utc time at solar midnight
-    solar_midnight = site.midnight(starttime, which='nearest')  # get local midnight in utc time
-
-    # Compute sun and moon info at times throughout night
     suninfo = SunInfo(site=site, utc_times=timeinfo.utc)
     mooninfo = MoonInfo(site=site, utc_times=timeinfo.utc)
-
     if verbose:
         print(timeinfo)
         print(suninfo)
         print(mooninfo)
 
-    # cycle through observations. Get target info at times throughout night
-    targetinfo = []
-    for i in range(0,n_obs):
-        coord_j2000 = coordinates.SkyCoord(obs.ra[i],obs.dec[i], frame='icrs', unit=(u.deg, u.deg))
-        current_epoch = coord_j2000.transform_to(coordinates.FK5(equinox='J'+str(starttime.jyear))) #coordinate for current epoch
-        target = TargetInfo(site=site,utc_times=timeinfo.utc,name=obs.obs_id[i],ra=current_epoch.ra,
-                            dec=current_epoch.dec) #initialize targetinfo class
-        targetinfo.append(target)
-        if verbose: print(target)
+    targetinfo = Parallel(n_jobs=25)(delayed(_init_target)(ra=obs.ra[i], dec=obs.dec[i], id=obs.obs_id[i],
+                                     starttime=starttime, site=site, utc_times=timeinfo.utc) for i in range(len(obs.obs_id)))
 
-    # print info
-    timeinfo.table(showall=False)
-    suninfo.table(showall=False)
-    mooninfo.table(showall=False)
+    # print night details to terminal
+    [print(line) for line in timeinfo.table()]
+    [print(line) for line in suninfo.table()]
+    [print(line) for line in mooninfo.table()]
 
     return timeinfo, suninfo, mooninfo, targetinfo
 

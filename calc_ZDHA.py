@@ -2,7 +2,7 @@ import copy
 import numpy as np
 import astropy.units as u
 
-def calc_ZDHA(lst,longitude,latitude,ra,dec):
+def calc_ZDHA(lst,latitude,ra,dec):
 
     verbose = False
 
@@ -18,7 +18,7 @@ def calc_ZDHA(lst,longitude,latitude,ra,dec):
     if verbose: print('HA',HA)
 
     sin_h1 = np.sin(latitude) * np.sin(dec) + \
-         np.cos(latitude) * np.cos(dec) * np.cos(HA)
+         np.cos(latitude) * np.cos(dec) * np.cos(HA[:])
     h1 = np.arcsin(sin_h1)
     if verbose: print('h1',h1)
 
