@@ -149,7 +149,7 @@ def actual_conditions( iq, cc, bg, wv):
         elif 0.5< iq <= 0.85:
             iq = 0.85
         else:
-            iq == 1.
+            iq = 1.
     # ========= cloud condition ==============
     if np.logical_or('Any' in cc,'null' in cc):
         cc = 1.
@@ -164,7 +164,7 @@ def actual_conditions( iq, cc, bg, wv):
         elif 0.5 < cc <= 0.85:
             cc = 0.85
         else:
-            cc == 1.
+            cc = 1.
     # =========== sky background =============
     if np.logical_or('Any' in bg,'null' in bg):
         bg = 1.
@@ -179,20 +179,20 @@ def actual_conditions( iq, cc, bg, wv):
         elif 0.5 < bg <= 0.85:
             bg = 0.85
         else:
-            bg == 1.
+            bg = 1.
     # ============= water vapour =============
     if np.logical_or('Any' in wv,'null' in wv):
         wv = 1.
     else:
         wv = float(re.findall(r'[\d\.\d]+',wv)[0])/100
         if wv <= 0.5:
-            wv = 0.5
+            wv = 0.2
         elif 0.5 < wv <= 0.7:
             wv = 0.7
         elif 0.5 < wv <= 0.85:
             wv = 0.85
         else:
-            wv == 1.
+            wv = 1.
     return iq,cc,bg,wv
 
 

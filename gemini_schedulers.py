@@ -3,7 +3,7 @@ import numpy as np
 import astropy.units as u
 from intervals import intervals
 
-def _optimize_plan(plan, istart, targetinfo):
+def _optimize_plan(plan, targetinfo):
 
     verbose = False
 
@@ -30,7 +30,6 @@ def _optimize_plan(plan, istart, targetinfo):
             if verbose: print('i, idsel, nid: ', i, idsel, nid)
             imax = -1
             wmax = 0.
-            temp_wmax = 0.
             idmax = 0.
             for j in range(0, len(idsel)):
                 if idsel[j] >= 0:
@@ -91,13 +90,12 @@ def _plan_details(plan, targetinfo):
     nt = len(plan)
     while i < nt:
         if plan[i] > 0:
-            n = 1
             next = True
             iobs = plan[i]  # current obs index in plan
             obslist.append(targetinfo[iobs].name)
             i_start.append(i)
             while next:
-                if plan[i+1] != plan[i] and i <= nt:
+                if plan[i+1] != plan[i] and i < nt:
                     i_end.append(i)
                     next = False
                 i = i + 1
@@ -107,11 +105,11 @@ def _plan_details(plan, targetinfo):
 
 
 
-class Gschedule(object):
+class PlanInfo(object):
 
-    @u.quantity_input(tot_time=u.h,night_length=u.h)
+    @u.quantity_input(used_time=u.h,night_length=u.h)
     def __init__(self, plantype=None, plan=None, obslist=None, i_start=None, i_end=None, hours=None, cplt=None,
-                 tot_time=0.*u.h, night_length=0.*u.h):
+                 used_time=0.*u.h, night_length=0.*u.h):
         """
         Parameters
         ----------
@@ -138,8 +136,8 @@ class Gschedule(object):
         cplt : boolean
             completion status at end of observation corresponding to identifiers in oblist
 
-        tot_time : astropy.units.Quantity
-            total number of hours scheduled
+        used_time : astropy.units.Quantity
+            total scheduled time
 
         night_length : astropy.units.Quantity
             total number of in night (or similar observing window)
@@ -152,17 +150,17 @@ class Gschedule(object):
         self.i_end = i_end
         self.hours = hours
         self.cplt = cplt
-        self.tot_time = tot_time
+        self.used_time = used_time
         self.night_length = night_length #thtimeinfo.night_length
 
     def __repr__(self):
 
         """
-        String representation of the gemini_schedulers.Gschedule object.
+        String representation of the gemini_schedulers.PlanInfo object.
         """
 
         class_name = self.__class__.__name__
-        attr_names = ['type','night_length','tot_time','obs_id','i_start','i_end','hours','cplt','plan']
+        attr_names = ['type','night_length','used_time','obs_id','i_start','i_end','hours','cplt','plan']
         attr_values = [getattr(self, attr) for attr in attr_names]
         attributes_strings = []
         for name, value in zip(attr_names, attr_values):
@@ -170,6 +168,25 @@ class Gschedule(object):
                 value = "'{}'".format(value)
                 attributes_strings.append("{}={}".format(name, value))
         return "<{}: {}>".format(class_name, ",\n    ".join(attributes_strings))
+
+    def table(self):
+        """
+        Table representation of gemini_classes.TimeInfo object
+        """
+        sattr = '\t\t{0:<25s}{1}'  # print string and string
+        table = []
+
+        class_name = self.__class__.__name__
+        attr_names = ['type', 'night_length', 'used_time']
+        table.append(str('\n\t' + class_name + ':'))
+        attr_values = [getattr(self, attr) for attr in attr_names]
+        for name, value in zip(attr_names, attr_values):
+            if value is not None:
+                if name == 'night_length' or name == 'used_time':
+                    table.append(str(sattr.format(name, value.round(2))))
+                else:
+                    table.append(str(sattr.format(name, value)))
+        return table
 
     @classmethod
     def priority(cls,obs,timeinfo,targetinfo):
@@ -189,8 +206,8 @@ class Gschedule(object):
 
         Returns
         ---------
-        '~gemini_schedule.Gschedule'
-            Gschedule object
+        '~gemini_schedule.PlanInfo'
+            PlanInfo object
 
         obs : '~gemini_classes.Gobservations'
             inputted Gobservation object with times
@@ -207,7 +224,6 @@ class Gschedule(object):
         dt = timeinfo.dt
         nt = timeinfo.nt
         n_obs = len(obs.obs_id)
-        ntcal = 0
         nsel = 0
         ii = np.where(plan == -1)[0][:]  # unscheduled time indices
 
@@ -232,14 +248,16 @@ class Gschedule(object):
 
                     # ===== Observation windows ====
                     # if observation weights are zero during current interval, skip remainder of loop.
-                    iwin = iint[np.where(targetinfo[i].weight[iint] > 0.)[0][:]]  # ind. of weights>0 in current window
-                    if len(iwin)==0:
+
+                    ipos = np.where(targetinfo[i].weight[iint] > 0.)[0][:] # in. of weights>0 in first interval
+                    if len(ipos)==0:
                         continue  # go to next observation if no non-zero weights in current window
                     else:
+                        iwin = iint[ipos] # in. with pos. weights in first unscheduled interval
                         if verbose: print('iwin', iwin)
                         if (len(iwin) >= 2):  # if window >=
                             if verbose: print('i, obs. weights:',i,targetinfo[i].weight[iint])
-                            i_wmax = iwin[np.argmax(targetinfo[i].weight[iwin])]  # index of max weight
+                            i_wmax = iwin[np.argmax(targetinfo[i].weight[iwin])]  # in. of max weight
                             wmax = targetinfo[i].weight[i_wmax]  # maximum weight
                         else:  # if window size of 1
                             wmax = targetinfo[i].weight[iwin]  # maximum weight
@@ -251,6 +269,7 @@ class Gschedule(object):
 
                         if verbose:
                             print('maxweight',maxweight)
+                            print('max obs: ',targetinfo[iimax].name)
                             print('iimax',iimax)
 
                 if (iimax == -1):
@@ -266,8 +285,9 @@ class Gschedule(object):
                         print('Inst: ',obs.inst[iimax])
                         print('Disperser: ',obs.disperser[iimax])
 
-                    if (obs.inst[iimax]!='GMOS'):
-                        if np.logical_and(obs.disperser[iimax]!='Mirror',obs.disperser[iimax]=='null'):
+                    ntcal = 0
+                    if 'GMOS' not in obs.inst[iimax]:
+                        if 'Mirror' not in obs.disperser[iimax] and 'null' not in obs.disperser[iimax]:
                             ntcal = 3
                             if verbose: print('add ntcall=3')
 
@@ -304,74 +324,75 @@ class Gschedule(object):
                 # pick optimal observing window by integrating weight function
                 if np.logical_and(nttime < nobswin , nttime != 0):
 
-                    maxf = 0.0
-
-                    if nttime > 1:
-                        # NOTE: integrates over one extra time slot...
-                        # ie. if nttime = 14, then the program will choose 15
-                        # x values to do trapz integration (therefore integrating
-                        # 14 time slots).
-                        if verbose:
-                            print('\nIntegrating max obs. over window...')
-                            print('istart',istart)
-                            print('iend',iend)
-                            print('nttime',nttime)
-                            print('j values',np.arange(istart,iend-nttime+2))
-                        for j in range(istart,iend-nttime+2):
-                            f = sum(targetinfo[iimax].weight[j:j+nttime])
+                    jj = np.where(plan == iimax)[0][:]  # check if already scheduled
+                    if len(jj)==0:
+                        maxf = 0.0
+                        if nttime > 1:
+                            # NOTE: integrates over one extra time slot...
+                            # ie. if nttime = 14, then the program will choose 15
+                            # x values to do trapz integration (therefore integrating
+                            # 14 time slots).
                             if verbose:
-                                print('j range',j,j+nttime-1)
-                                print('obs wieght',targetinfo[iimax].weight[j:j+nttime])
-                                print('integral',f)
-                            if f>maxf:
-                                maxf = f
-                                jstart = j
+                                print('\nIntegrating max obs. over window...')
+                                print('istart',istart)
+                                print('iend',iend)
+                                print('nttime',nttime)
+                                print('j values',np.arange(istart,iend-nttime+2))
+                            for j in range(istart,iend-nttime+2):
+                                f = sum(targetinfo[iimax].weight[j:j+nttime])
+                                if verbose:
+                                    print('j range',j,j+nttime-1)
+                                    print('obs wieght',targetinfo[iimax].weight[j:j+nttime])
+                                    print('integral',f)
+                                if f>maxf:
+                                    maxf = f
+                                    jstart = j
 
-                        jend = jstart + nttime - 1
-
-                    else:
-                        jstart = np.argmax(targetinfo[iimax].weight[iwinmax])
-                        maxf = np.amax(targetinfo[iimax].weight[jstart])
-                        jend = jstart + nttime - 1
-
-                    if verbose:
-                        print('max integral of weight func (maxf)',maxf)
-                        print('index jstart',jstart)
-                        print('index jend',jend)
-
-                    if jstart < nminuse:  # shift block if near start or end of night
-                        if np.logical_and(plan[0]==-1 , targetinfo[iimax].weight[0]>0. ):
-                            jstart = 0
                             jend = jstart + nttime - 1
-                    elif (nt-jend) < nminuse:
-                        if np.logical_and(plan[-1]==-1 , targetinfo[iimax].weight[-1]>0. ):
-                            jend = nt - 1
-                            jstart = jend - nttime + 1
 
-                    # dstart = jstart - istart - 1
-                    # wstart = obslist[iimax]['weight'][istart]
-                    # dend = iend - jend + 1
-                    # wend = obslist[iimax]['weight'][iend]
-                    # if np.logical_and(dstart < nminuse , dend < nminuse):
-                    #     if np.logical_and(wstart > wend , wstart > 0.):
-                    #         jstart = istart
-                    #         jend = istart + nttime - 1
-                    #     elif wend > 0.:
-                    #         jstart = iend - nttime + 1
-                    #         jend = iend
-                    # elif np.logical_and(dstart < nminuse , wstart > 0.):
-                    #     jstart = istart
-                    #     jend = istart + nttime - 1
-                    # elif np.logical_and(dend < nminuse , wstart > 0.):
-                    #     jstart = iend - nttime + 1
-                    #     jend = iend
-                    # else:
-                    #     if (jj[0] < istart):
-                    #         jstart = istart
-                    #         jend = istart + nttime - 1
-                    #     else:
-                    #         jstart = iend - nttime + 1
-                    #         jend = iend
+                        else:
+                            jstart = np.argmax(targetinfo[iimax].weight[iwinmax])
+                            maxf = np.amax(targetinfo[iimax].weight[jstart])
+                            jend = jstart + nttime - 1
+
+                        if verbose:
+                            print('max integral of weight func (maxf)',maxf)
+                            print('index jstart',jstart)
+                            print('index jend',jend)
+
+                        if jstart < nminuse:  # shift block if near start or end of night
+                            if plan[0]==-1 and targetinfo[iimax].weight[0]>0.:
+                                jstart = 0
+                                jend = jstart + nttime - 1
+                        elif (nt-jend) < nminuse:
+                            if plan[-1]==-1 and targetinfo[iimax].weight[-1]>0.:
+                                jend = nt - 1
+                                jstart = jend - nttime + 1
+
+                        dstart = jstart - istart - 1
+                        wstart = targetinfo[iimax].weight[istart]
+                        dend = iend - jend + 1
+                        wend = targetinfo[iimax].weight[iend]
+                        if dstart < nminuse and dend < nminuse:
+                            if wstart > wend and wstart > 0.:
+                                jstart = istart
+                                jend = istart + nttime - 1
+                            elif wend > 0.:
+                                jstart = iend - nttime + 1
+                                jend = iend
+                        elif dstart < nminuse and wstart > 0.:
+                            jstart = istart
+                            jend = istart + nttime - 1
+                        elif dend < nminuse and wstart > 0.:
+                            jstart = iend - nttime + 1
+                            jend = iend
+                    else:
+                        if jj[0] < istart:
+                            jstart = istart
+                            jend = istart + nttime - 1
+                        else:
+                            jstart = iend - nttime + 1
+                            jend = iend
 
                 else:
                     jstart = istart
@@ -389,9 +410,9 @@ class Gschedule(object):
                 ntmin = np.minimum(nttime - ntcal, nobswin)  # observation time slots scheduled (minus cal)
                 obs.obs_time[iimax] = obs.obs_time[iimax] + dt * ntmin  # update observed time
                 # ii_obs = np.where(obs.obs_id == obs.prog_ref[iimax])[0][:]  # indices of obs. in same program
-                obs.comp_time[iimax] = obs.comp_time[iimax] + dt * ntmin / obs.tot_time[iimax]  # update comp_time
+                obs.obs_comp[iimax] = obs.obs_comp[iimax] + dt * ntmin / obs.tot_time[iimax]  # update cplt fraction
 
-                if obs.comp_time[iimax]>=1.:  # completed observation
+                if obs.obs_comp[iimax]>=1.:  # completed observation
                     targetinfo[iimax].weight = targetinfo[iimax].weight * -1  # set all target weights to neg.
                 else:  # incomplete observation
                     targetinfo[iimax].weight[jstart:jend+1] = targetinfo[iimax].weight[jstart:jend+1] * -1  # set scheduled target weights to neg.
@@ -411,7 +432,7 @@ class Gschedule(object):
                 if verbose:
                     print('Current program: ',plan)
                     print('New obs time: ', obs.obs_time[iimax])
-                    print('New comp time: ', obs.comp_time[iimax])
+                    print('New comp time: ', obs.obs_comp[iimax])
 
                 if schedule_order:
                     print('\tScheduled: ',iimax,targetinfo[iimax].name,'from',timeinfo.utc[jstart].iso,'to',timeinfo.utc[jend].iso)
@@ -420,17 +441,17 @@ class Gschedule(object):
             ii = np.where(plan == -1)[0][:]  # get indices of remaining time slots
 
         # finalize plan and retrieve details
-        plan = _optimize_plan(plan, istart, targetinfo)  # Final plan
+        plan = _optimize_plan(plan, targetinfo)  # Try rearranging plan
+
         obslist, i_start, i_end = _plan_details(plan, targetinfo)  # plan details
         hours = (i_end-i_start+1)*dt  # lengths of scheduled observations
         ii = np.where(plan >= 0)[0][:] # scheduled time slots
-        tot_time = len(ii) * dt  # total scheduled time
+        used_time = len(ii) * dt  # total scheduled time
         night_length = timeinfo.night_length
         cplt = np.full(len(obslist), False, dtype=bool)  # completion status of scheduled obs.
         for i in range(0, len(i_start)):
-            print(plan[i_start[i]], obs.comp_time[plan[i_start[i]]])
-            if obs.comp_time[plan[i_start[i]]] >= 1.:
+            if obs.obs_comp[plan[i_start[i]]] >= 1.:
                 cplt[i] = True
 
         return cls(plantype=plantype, plan=plan, obslist=obslist, i_start=i_start, i_end=i_end, hours=hours,
-                   cplt=cplt, tot_time=tot_time, night_length=night_length),obs
+                   cplt=cplt, used_time=used_time, night_length=night_length),obs

@@ -2,355 +2,549 @@ import numpy as np
 import re
 import astropy.units as u
 
-def obsweight(dec, AM, HA, AZ, band, user_prior, status, latitude,
-              cond, acond, obs_time, elev, wind=[0.*u.m/u.s,0.*u.deg], wra=1., starttime=17.):
+__all__=[]
 
-     """
-     Calculate observation weight at all time intervals
-     
-     Parameters
-     -----------
-     cond - observation condition constraints, output from convcond
-     dec  - decimal dec
-     AM   - airmass
-     HA   - decimal hour angle
-     AZ   - azimuth
-     band - ranking band
-     user_prior - user priority
-     status - completion status as fractional percent
-     latitude - observator latitude
-     time - hours remaining in observation
-     acond - actual conditions (output from convcond)
-     wind - wind speed (m/s) and direction
-     otime - time used (observed)
-     wra - RA weighting
-     elev - elevation constraint
-     starttime - beginning time of the plan
+def weight_cond_match(cond, acond, negHA):
+    """
+    Match condition constraints to actual conditions:
+        - Set cmatch to zero for times where the required conditions are worse than the actual conditions.
+        - Multiply cmatch by 0.75 at times when the actual image quality conditions are better than required.
+        - Multiply cmatch by 0.75 at times when the actual cloud conditions are better than required.
 
-     Return
-     --------
-     weight - array of floats with length nt
-     """
-     verbose = False
+    Input
+    -------
+    cmatch : array of floats
+        initial cmatch weights are set to 1.
 
-     nt = len(HA) # number of time steps
-     cmatch = np.ones(nt)
-     wam = np.ones(nt)
-     wwind = np.ones(nt)
-     
-     if verbose:
-          print(cond)
-          print(acond)
+    cond : dictionary
+        required image quality 'iq', cloud conditions 'cc', 'sky background 'bg'
+         and water vapor 'wv' conditions for observation (one value for each)
 
-     # ======================== Conditions comparison ========================
-     # Return 0 weight if requested conditions worse than actual.
-     bad_iq = acond['iq']>cond['iq']
-     bad_cc = acond['cc']>cond['cc']
-     bad_bg = acond['bg']>cond['bg']
-     bad_wv = acond['wv']>cond['wv']
+    acond : dictionary
+        actual image quality 'iq', cloud conditions 'cc', 'sky background 'bg'
+         and water vapor 'wv' at the observing site.  Should have one value for
+         iq, cc, and wv.  acond['bg'] is an array of the sky background at all times
+         throughout the observing window.
 
-     i_bad_cond = np.where(np.logical_or(np.logical_or(bad_iq,bad_cc),\
-                         np.logical_or(bad_bg,bad_wv)))[0][:]
+    Return
+    -------
+    cmatch : array of floats
+        New cmatch weights
+    """
+    verbose = False
 
-     if verbose:
-          print('iq worse than required',bad_iq)
-          print('cc worse than required',bad_cc)
-          print('bg worse than required',bad_bg)
-          print('wv worse than required',bad_wv)
-          print('i_bad_cond',i_bad_cond)
-     
+    cmatch = np.ones(len(acond['bg']))
+    # Where actual conditions worse than requirements
+    bad_iq = acond['iq'] > cond['iq']
+    bad_cc = acond['cc'] > cond['cc']
+    bad_bg = acond['bg'] > cond['bg']
+    bad_wv = acond['wv'] > cond['wv']
+    i_bad_cond = np.where(np.logical_or(np.logical_or(bad_iq, bad_cc), np.logical_or(bad_bg, bad_wv)))[0][:]
 
-     cmatch[i_bad_cond] = 0.
+    # Multiply weights by 0 where actual conditions worse than required .
+    cmatch[i_bad_cond] = 0.
 
-     #decrease weight if conditions are better than requested iq,cc.
-     # *effectively drop one band if IQ or CC are better than needed
-     # and not likely to lose target, need to make this wavelen. dep. 
-     if verbose: 
-          better_iq = acond['iq']<cond['iq']
-          better_cc = acond['cc']<cond['cc']
-          print('iq better than required',better_iq)
-          print('cc better than required',better_cc)
+    # Where actual iq, cc conditions better than required
+    better_iq = acond['iq'] < cond['iq']
+    better_cc = acond['cc'] < cond['cc']
 
-     i_better_iq = np.where(acond['iq']<cond['iq'])[0][:]
-     if len(i_better_iq)!=0:
-          cmatch = cmatch * 0.75
+    # Multiply weights by 0.75 where iq better than required
+    i_better_iq = np.where(acond['iq'] < cond['iq'])[0][:]
+    if len(i_better_iq) != 0 and negHA:
+        cmatch = cmatch * 0.75
 
-     i_better_cc = np.where(acond['cc']<cond['cc'])[0][:]
-     if len(i_better_cc)!=0:
-          cmatch = cmatch * 0.75
+    # Multiply weights by 0.75 where cc better than required
+    i_better_cc = np.where(acond['cc'] < cond['cc'])[0][:]
+    if len(i_better_cc) != 0 and negHA:
+        cmatch = cmatch * 0.75
 
-     if verbose: print('cmatch',cmatch)
-     
-     # Compute single weight representative of conditions 
-     twcond = (1./cond['iq'])**3 + (1./cond['cc'])**3 + (1./cond['bg'])**3 + (1./cond['wv'])**3
-     
-     if verbose: 
-          print('wiq,wcc,wbg,wwv',(1./cond['iq'])**3, (1./cond['cc'])**3, (1./cond['bg'])**3, (1./cond['wv'])**3)
-          print('twcond',twcond)
+    if verbose:
+        print('iq worse than required', bad_iq)
+        print('cc worse than required', bad_cc)
+        print('bg worse than required', bad_bg)
+        print('wv worse than required', bad_wv)
+        print('i_bad_cond', i_bad_cond)
+        print('iq better than required', better_iq)
+        print('cc better than required', better_cc)
 
-     # ======================== Airmass ========================
-     i_bad_AM = np.where(AM>2.)[0][:]
-     wam[i_bad_AM] = 0.
+    return cmatch
+
+def weight_tot_cond(cond):
+    """
+    Returns a value representative of the required observing conditions (sum of the reciprocals cubed).
+
+    twcond = (1./cond['iq'])**3 + (1./cond['cc'])**3 + (1./cond['bg'])**3 + (1./cond['wv'])**3
+
+    Input
+    -------
+    cond : dictionary
+        required image quality 'iq', cloud conditions 'cc', 'sky background 'bg'
+         and water vapor 'wv' conditions for observation (one value for each)
+
+    Return
+    -------
+    twcond : float
+        total conditions weight
+    """
+    return (1./cond['iq'])**3 + (1./cond['cc'])**3 + (1./cond['bg'])**3 + (1./cond['wv'])**3
+
+def weight_am(AM, HA, elev):
+    """
+    Airmass weights:
+        - Set wam to 0. at times where the the airmass is greater than 2.
+        - Set wam to 0. at times where the elevation constraint is not met
+
+    Input
+    -------
+    wam : array of floats
+        initial wam weights are set to 1.
+
+    AM : array of floats
+        Target airmass at times throughout observing window.
+
+    HA : array of 'astropy.units.quantity.Quantity's
+         Target hourangle at times throughout observing window.
+
+    Return
+    -------
+    wam : array of floats
+        New wam weights
+    """
+    wam = np.ones(len(AM))
+    i_bad_AM = np.where(AM > 2.)[0][:]
+    wam[i_bad_AM] = 0.
+
+    if elev['type']=='Airmass':
+        i_bad_elev = np.where(np.logical_or(AM<elev['min'],AM>elev['max']))[0][:]
+        wam[i_bad_elev] = 0.
+    elif elev['type']=='Hour Angle':
+        i_bad_elev = np.where(np.logical_or(HA<elev['min'],HA>elev['max']))[0][:]
+        wam[i_bad_elev] = 0.
+
+    return wam
+
+def weight_wind(wind, AZ):
+    """
+    Wind conditions weights:
+        - Set wwind to 0. at times where the wind speed is greater than 10km/h
+            AND the telescope is pointed within 20deg of the wind direction.
+
+    Input
+    -------
+    wwind : array of floats
+        initial wwind weights are set to 1.
+
+    wind : array of 'astropy.units.quantity.Quantity'
+        wind[0] = wind speed in meters per hour
+        wind[1] = wind direction in degrees
+
+    Return
+    -------
+    wwind : array of floats
+        New wwind weights
+    """
+    wwind = np.ones(len(AZ))
+    ii = np.where(np.logical_and(wind[0] > 10.e3 * u.m / u.h, abs(AZ - wind[1]) < 20. * u.deg))[0][:]
+    wwind[ii] = 0.
+    return wwind
+
+def weight_ra(targetinfo, tot_time, obs_time):
+    """
+    Compute a weight representing the observation target ra-distribution.
+
+    Input
+    -------
+    targetinfo : list of 'gemini_classes.TargetInfo'
+        list of objects with target information
+
+    Return
+    -------
+    wra : array of floats
+        ra-distribution weights at 30deg intervals
+    """
+    verbose = False
+
+    ras = np.array([target.ra / u.deg for target in targetinfo]) * u.deg
+    bin_edges = [0., 30., 60., 90., 120., 150., 180., 210., 240., 270., 300., 330., 360.] * u.deg
+
+    if verbose:
+        print('target ra distribution...')
+        print('ras', ras)
+        print('bins edges', bin_edges)
+
+    bin_nums = np.digitize(ras, bins=bin_edges) - 1  # get ra bin index for each target
+
+    if verbose:
+        print('histogram bin indices', bin_nums)
+
+    # Sum total observing hours in bins and divide mean (wra weight)
+    wra = np.zeros(12) * u.h
+    for i in np.arange(0, 12):
+        ii = np.where(bin_nums == i)[0][:]
+        wra[i] = wra[i] + sum(tot_time[ii] - obs_time[ii])
+    if verbose: print('Total time (ra distribution)', wra)
+    wra = wra / np.mean(wra)
+
+    if verbose: print('wra (ra distribution weight)', wra)
+    return wra, bin_edges
+
+def weight_ha(latitude, dec, HA):
+    """
+    Compute a weight representing the target location and visibility window.
+
+    Input
+    -------
+    latitude : 'astropy.coordinates.angles.Latitude'
+        observer latitude
+
+    dec : 'astropy.coordinates.angles.Latitude'
+        target declination
+
+    Return
+    -------
+    wra : float
+        right ascension weighting
+    """
+    verbose = False
+
+    if latitude < 0:
+        decdiff = latitude - dec
+    else:
+        decdiff = dec - latitude
+
+    declim = [90., -30., -45., -50, -90.] * u.deg
+    wval = [1.0, 1.3, 1.6, 2.0]
+    wdec = 0.
+    for i in np.arange(4):
+        if np.logical_and(decdiff < declim[i], decdiff >= declim[i+1]):
+            wdec = wval[i]
+
+    # HA - if within -1hr of transit at  twilight it gets higher weight
+    if abs(decdiff) < 40. * u.deg:
+        c = wdec * np.array([3., 0.1, -0.06])  # weighted to slightly positive HA
+    else:
+        c = wdec * np.array([3., 0., -0.08])  # weighted to 0 HA if Xmin > 1.3
+    wha = c[0] + c[1] / u.hourangle * HA + c[2] / (u.hourangle ** 2) * HA ** 2
+    ii = np.where(wha <= 0)[0][:]
+    wha[ii] = 0.
+
+    if np.amin(HA) >= -1. * u.hourangle:
+        wha = wha * 1.5
+        if verbose: print('multiplied wha by 1.5')
+
+    if verbose:
+        print('wdec', wdec)
+        print('lat', latitude)
+        print('decdiff', decdiff)
+        print('HA/unit^2', HA / (u.hourangle ** 2))
+        print('min HA', np.amin(HA).hour)
+
+    return wha
+
+def weight_band(band):
+    """
+    Compute ranking band weight
+
+    Input
+    -------
+    band : int
+        ranking band of 1, 2, 3 or 4
+    """
+    return (4. - np.int(band)) * 1000
+
+def weight_userpriority(user_prior):
+    """
+    Compute user priority weight
+
+    Input
+    -------
+    user prior : string
+        Low, Medium, High, or Target of Opportunity
+    """
+    if user_prior == 'Target of Opportunity':
+        wprior = 500.
+    elif user_prior == 'High':
+        wprior = 2.
+    elif user_prior == 'Medium':
+        wprior = 1.
+    elif user_prior == 'Low':
+        wprior = 0.
+    else:
+        wprior = 0.
+    return wprior
+
+def weight_status(prstatus, obstatus):
+    """
+    Compute a weight representing the observation and program completion status.
+
+    Input
+    -------
+    prstatus : boolean
+        True if any observations in program are started or completed
+
+    obstatus : float
+        fraction of total observation time completed
+    """
+    if prstatus:
+        wstatus = 1.5
+        if obstatus > 0.:
+            wstatus = 2.0
+    else:
+        wstatus = 1.
+    return wstatus
+
+def vsb_to_sbcond(vsb):
+    """
+    Convert visible sky background magnitudes to decimal conditions.
+
+        Conversion scheme:
+            1.0 |          vsb < 19.61
+            0.8 | 19.61 <= vsb < 20.78
+            0.5 | 20.78 <= vsb < 21.37
+            0.2 | 21.37 <= vsb
 
 
+    Input
+    -------
+    target :  'gemini_classes.TargetInfo'
+        TargetInfo object with time dependent vsb quantities
 
-     # ======================== Elevation constraint ========================
-     # Change constraints for testing
-     # elev['type']='HourAngle'
-     # elev['min']=-5
-     # elev['max']=5
-     
-     if verbose:
-          print('AM',AM)
-          print('HA',HA)
-          print('elev',elev)
+    Return
+    -------
+    sbcond : array of floats
+        sky background condition values
+    """
 
-     if elev['type']=='Airmass':
-          i_bad_elev = np.where(np.logical_or(AM<elev['min'],AM>elev['max']))[0][:]
-          wam[i_bad_elev] = 0.
-     elif elev['type']=='HourAngle':
-          i_bad_elev = np.where(np.logical_or(HA<elev['min'],HA>elev['max']))[0][:]
-          wam[i_bad_elev] = 0.
-     else:
-          None
+    sbcond = np.zeros(len(vsb), dtype=float)
+    ii = np.where(vsb < 19.61)[0][:]
+    sbcond[ii] = 1.
+    ii = np.where(np.logical_and(vsb >= 19.61, vsb < 20.78))[0][:]
+    sbcond[ii] = 0.8
+    ii = np.where(np.logical_and(vsb >= 20.78, vsb < 21.37))[0][:]
+    sbcond[ii] = 0.5
+    ii = np.where(vsb >= 21.37)[0][:]
+    sbcond[ii] = 0.2
+    return sbcond
 
-     if verbose: print('wam',wam)
+def convert_elev(elev_const):
+    """
+    Convert elevation constraint for observation and return as a dictionary
+        of the form {'type':string,'min':float,'max':float}
 
+    Input
+    -------
+    elev_const : string
+        elevation constraint type and limits
+        (eg. elev_const = '{Hour Angle -2.00 2.00}')
 
-     # ======================== Wind ========================
-     # Wind, do not point within 20deg of wind if over limit
-     
-     ii = np.where(np.logical_and(wind[0]>10.e3*u.m/u.s,abs(AZ - wind[1]) < 20.*u.deg))[0][:]
-     wwind[ii] = 0.
-     
-     if verbose: print('wwind',wwind)
+    Returns
+    --------
+    dictionary
+        (eg. elev = {'type':'Airmass', 'min':0.2, 'max':0.8})
+    """
+    if (elev_const.find('None') != -1) or (elev_const.find('null') != -1) or (elev_const.find('*NaN') != -1):
+        return {'type': 'None', 'min': 0., 'max': 0.}
+    elif elev_const.find('Hour') != -1:
+        nums = re.findall(r'[+-]?\d+(?:\.\d+)?', elev_const)
+        return {'type': 'Hour Angle', 'min': float(nums[0])* u.hourangle, 'max': float(nums[1])* u.hourangle}
+    elif elev_const.find('Airmass') != -1:
+        nums = re.findall(r'[+-]?\d+(?:\.\d+)?', elev_const)
+        return {'type': 'Airmass', 'min': float(nums[0]), 'max': float(nums[1])}
+    else:
+        raise TypeError('Could not determine elevation constraint from string: ', elev_const)
 
+def obsweight(dec, AM, HA, AZ, band, user_prior, prstatus, latitude,
+              cond, acond, obstatus, elev, wind=[0.*u.m/u.s, 0.*u.deg], wra=1.):
+    """
+    Calculate weights for single observation.
 
-     # ======================== Visibility ========================
-     if latitude<0:
-          decdiff = latitude-dec
-     else:
-          decdiff = dec-latitude
-     
-     declim=[90.,-30.,-45.,-50,-90.]*u.deg
-     wval=[1.0,1.3,1.6,2.0]
-     wdec=0.
-     for i in np.arange(4):
-          if np.logical_and(decdiff<declim[i],decdiff>declim[i+1]):
-               wdec = wval[i]
-          else:
-               None
-     if verbose:
-         print('wdec',wdec)
-         print('lat', latitude)
-         print('decdiff', decdiff)
-         print('starttime', starttime)
-         print('HA/unit^2', HA/(u.hourangle**2))
+    weighting schemes:
+    1. (twcond + wstatus * wha + wband + wprior + wbal + wra) * cmatch * wam * wcplt * wwind
 
-     # HA - if within -1hr of transit at  twilight it gets higher weight
-     if np.logical_and(abs(decdiff)<40.*u.deg,starttime>12.):
-          c = wdec * np.array([3.,0.1,-0.06]) #weighted to slightly positive HA
-     else:
-          c = wdec * np.array([3.,0.,-0.08]) #weighted to 0 HA if Xmin > 1.3
-     wha = c[0] + c[1]/u.hourangle*HA + c[2]/(u.hourangle**2)*HA**2
-     ii = np.where(wha<=0)[0][:]
-     wha[ii] = 0.
-          
-     
-     if np.amin(HA) >= -1.*u.hourangle:
-          wha = wha*1.5
-          if verbose: print('multiplied wha by 1.5')
-     
-     if verbose: 
-          print('wha',wha)
-          print('min HA',np.amin(HA))
-          
+    weights
+    --------
+    twcond - value representative of required observation conditions
+    wstatus - observation and program status (increased if observation or program are partially completed)
 
 
-     # ======================== Band ========================
-     wband = (4. - np.int(band)) * 1000
-     if verbose: print('wband',wband)
+    Inputs
+    --------
+    cond - required sky conditions
+    acond - actual sky conditions
+    dec  - target declination
+    AM   - target airmasses
+    HA   - target hour angles
+    AZ   - target azimuths
+    latitude - observer latitude
+    band - ranking band (1, 2, 3, 4)
+    user_prior - user priority (Low, Medium, High)
+    pstatus - program completion as fraction
+    ostatus - observation completion as fraction
+    wind - wind conditions (speed (m/s) and direction)
+    wra - RA distribution weights
+    elev - elevation constraint
 
+    Return
+    --------
+    weight - array of floats with length nt
+    """
+    verbose = False
 
-     # ======================== User Priority ========================
-     if user_prior == 'Target of Opportunity':
-          wprior = 500.
-     elif user_prior == 'High':
-          wprior = 2.
-     elif user_prior == 'Medium':
-          wprior = 1.
-     elif user_prior == 'Low':
-          wprior = 0.
-     else:
-          wprior = 0.
-     
-     if verbose: print('wprior',wprior)
+    # Weighting schemes
+    weighting1 = True
 
+    # ======================== Matching actual + required conditions ========================
+    cmatch = weight_cond_match(cond=cond, acond=acond, negHA=min(HA) < 0.*u.hourangle)
+    if verbose:
+        print('cond', cond)
+        print('acond', acond)
+        print('cmatch', cmatch)
+        print('minHA<0', min(HA) < 0.*u.hourangle)
 
-     # ======================== Completion Status ========================
-     wcplt = 1.
-     if status >= 1.0:
-          wcplt = 0.
-          
-     if verbose: print('wcplt',wcplt)
+    # ===================== Total required conditions =====================
+    if weighting1:
+        twcond = weight_tot_cond(cond=cond)
+        if verbose:
+            print('twcond', twcond)
+    else:
+        twcond = 0.
 
-     wstatus = 1.
-     if status > 0.:
-          wstatus = wstatus * 1.5
-     if obs_time > 0.:
-          wstatus = 2.0
-     
-     if verbose: print('wstatus',wstatus)
+    # ======================== Airmass/elevation constraints ========================
+    if weighting1:
+        wam = weight_am(AM=AM, HA=HA, elev=elev)
+        if verbose:
+            print('AM', AM)
+            print('HA.hour', HA.hour)
+            print('elev', elev)
+            print('wam', wam)
+    else:
+        wam = np.ones(len(AM))
 
+    # ======================== Wind ========================
+    # Wind, do not point within 20deg of wind if over limit
+    if weighting1:
+        wwind = weight_wind(wind=wind, AZ=AZ)
+        if verbose: print('wwind',wwind)
+    else:
+        wwind = np.ones(len(AZ))
 
+    # ==================== Hour Angle / Location  ====================
+    wha = weight_ha(latitude=latitude, dec=dec, HA=HA)
+    if verbose: print('wha', wha)
 
-     # ======================== Partner Balance ========================
-     wbal = 0.
+    # ======================== Band ========================
+    wband = weight_band(band=band)
+    if verbose: print('wband',wband)
 
-     if verbose:
-         print('wbal',wbal)
-         print('wra', wra)
+    # ======================== User Priority ========================
+    wprior = weight_userpriority(user_prior=user_prior)
+    if verbose: print('wprior',wprior)
 
+    # ======================== Completion Status ========================
+    wstatus = weight_status(prstatus=prstatus, obstatus=obstatus)
+    if verbose: print('wstatus',wstatus)
 
-     # ======================== Total weight ========================
-     weight = (twcond + wstatus * wha + wband + wprior + wbal + wra) * cmatch * wam * wcplt * wwind
-     
-     if verbose: print('Total weight',weight)
+    # ======================== Partner Balance ========================
+    wbal = 0.
+    if verbose:
+       print('wbal',wbal)
+       print('wra', wra)
 
-     return weight
+    # ======================== Final weighting formula ========================
+    weight = (twcond + wstatus * wha + wband + wprior + wbal + wra) * cmatch * wam * wwind
+    if verbose: print('Total weight',weight)
+
+    return weight
 
 
 
 def calc_weight(site,obs,timeinfo,targetinfo,acond):
 
-     """
-     Parameters
-     ----------
-     Site object :param site: astroplan.Observer
+    """
+    Calculate weights for multiple observations.
 
-     OT catalog observation info :param obs: gemini_classes.Gobservations
+    Parameters
+    ----------
+    site : 'astroplan.Observer'
+        Observing site info
 
-     Observing window time info :param timeinfo: gemini_classes.TimeInfo
+    obs : 'gemini_classes.Gobservations'
+        OT catalog info
 
-     Target time dependent parameters :param targetinfo: gemini_classes.TargetInfo
+    timeinfo : 'gemini_classes.TimeInfo'
+        Times info for observing window
 
-     Actual conditions :param acond: list of converted sky visibility conditions as
-          decimal values (i.e. acond=[iq, cc, bg, wv])
+    targetinfo: 'gemini_classes.TargetInfo'
+        Time dependent values for observation targets
 
-     Return
-     --------
-     List of gemini_classes.TargetInfo objects with calculated weights
-     """
+    acond : dictionary
+        Actual conditions - percentage sky visibility conditions converted to
+        decimal values
 
-     verbose = False
+    Return
+    --------
+    targetinfo : List of 'gemini_classes.TargetInfo'
+        Return list of TargetInfo objects with calculated weights
+    """
 
-     #   ======================= target ra distribution =======================
-     ras = np.array([target.ra/u.deg for target in targetinfo])*u.deg
-     bin_edges = [0.,30.,60.,90.,120.,150.,180.,210.,240.,270.,300.,330.,360.]*u.deg
+    verbose = False
 
-     if verbose:
-        print('target ra distribution...')
-        print('ras',ras)
-        print('bins edges',bin_edges)
+    #   ================== ra distribution weights ====================
+    wra, bin_edges = weight_ra(targetinfo=targetinfo, tot_time=obs.tot_time, obs_time=obs.obs_time)
+    if verbose: print('wra (ra distribution weight)',wra)
 
-     bin_nums = np.digitize(ras,bins=bin_edges) -1  # get ra bin index for each target
+    nt = timeinfo.nt
+    n_obs = len(obs.obs_id)
+    for i in range(n_obs):
 
-     if verbose:
-        print('histogram bin indices',bin_nums)
+        ttime = np.round((obs.tot_time[i] - obs.obs_time[i]) * 10) / 10  # remaining time in observation
+        if verbose:
+            ii = np.where(obs.prog_ref == obs.prog_ref[i])[0][:]
+            ptime = np.round(sum(obs.tot_time[ii] - obs.obs_time[ii]) * 10) / 10
+            print('Prog. remaining time (ptime):',ptime)
+            print('Obs. remaining time (ttime):',ttime)
 
-     # Sum total observing hours in bins and divide mean (wra weight)
-     hhra = np.zeros(12)*u.h
-     for i in np.arange(0,12):
-        ii = np.where(bin_nums==i)[0][:]
-        hhra[i] = hhra[i] + sum(obs.tot_time[ii]-obs.obs_time[ii])
-     hhra = hhra/np.mean(hhra)
+        if ttime > 0.:
 
-     if verbose: print('hhra (ra distribution weight)',hhra)
+            ii = 0  # reset index value
+            for j in np.arange(12):  # Get hour angle histogram bin of current target
+                if bin_edges[j] <= obs.ra[i] < bin_edges[j + 1]:
+                    ii = j
 
-     nt = timeinfo.nt
-     n_obs = len(obs.obs_id)
+            # ========= Program partially completed ==========
+            jj = np.where(obs.prog_ref == obs.prog_ref[i])[0][:]
+            prstatus = np.any(obs.obs_time[jj] > 0.)
 
-     for i in range(n_obs):
+            # ========= convert sky background mag ==========
+            sbcond = vsb_to_sbcond(vsb=targetinfo[i].vsb)
 
-          #   ================== convert sky background mag to bg condition ===================
-          # define sky background condition
-          sbcond = np.zeros(nt,dtype=float)
-          ii = np.where(targetinfo[i].vsb <= 19.61)[0][:]
-          sbcond[ii] = 1.
-          ii = np.where(np.logical_and(targetinfo[i].vsb>=19.61,targetinfo[i].vsb<=20.78))[0][:]
-          sbcond[ii] = 0.8
-          ii = np.where(np.logical_and(targetinfo[i].vsb>=20.78,targetinfo[i].vsb<=21.37))[0][:]
-          sbcond[ii] = 0.5
-          ii = np.where(targetinfo[i].vsb>=21.37)[0][:]
-          sbcond[ii] = 0.2
+            cond = {'iq': obs.iq[i], 'cc': obs.cc[i], 'bg': obs.bg[i], 'wv': obs.wv[i]}
+            actualcond = {'iq': acond[0], 'cc': acond[1], 'bg': sbcond, 'wv': acond[3]}
+            if verbose:
+                print('cond', cond)
+                print('acond', actualcond)
 
-          # set actual and required conditions
-          cond = {'iq': obs.iq[i], 'cc': obs.cc[i], 'bg': obs.bg[i], 'wv': obs.wv[i]}
-          actualcond = {'iq': acond[0], 'cc': acond[1], 'bg': sbcond, 'wv': acond[3]}
+            # ========= convert elevation constraint ==========
+            elev = convert_elev(elev_const=obs.elev_const[i])
 
-          if verbose:
-              print('cond', cond)
-              print('acond', actualcond)
+            if verbose:
+                print('Obs. id: ',obs.obs_id[i])
+                print('dec',targetinfo[i].dec.deg)
+                print('latitude',site.location.lat)
+                print('band',obs.band[i])
+                print('user_prior',obs.user_prior[i])
+                print('prog. partially completed (prstatus): ',prstatus)
+                print('elevation constraint ',elev)
+                print('condition constraints',cond)
+                print('actual conditions',acond)
 
-          #=================== Compute observation weights ========================
-          ttime = np.round((obs.tot_time[i]-obs.obs_time[i])*10)/10 # remaining time in observation
-
-          if verbose:
-               ii = np.where(obs.prog_ref == obs.prog_ref[i])[0][:]
-               ptime = np.round(sum(obs.tot_time[ii] - obs.obs_time[ii]) * 10) / 10
-               print('Prog remaining time (ptime):',ptime)
-               print('Obs. remaining time (ttime):',ttime)
-
-          if ttime > 0.0:
-
-               ii = 0  # reset index value
-               for j in np.arange(12):  # Get corresponding hour angle histogram bin
-                    if bin_edges[j] <= obs.ra[i] < bin_edges[j + 1]:  # get ra historgram bin
-                         ii = j
-
-               # Convert elevation constraints dictionaries
-               # of the form {'type':string,'min':float,'max':float}
-               if (obs.elev_const[i].find('None') != -1) or (obs.elev_const[i].find('null') != -1) or (
-                       obs.elev_const[i].find('*NaN') != -1):
-                    emin = 0.
-                    emax = 0.
-                    etype = 'None'
-                    # print('Read none, null, or *NaN',self.elev_const[i])
-               elif obs.elev_const[i].find('Hour') != -1:
-                    nums = re.findall(r'\d+.\d+', obs.elev_const[i])
-                    emin = nums[0]
-                    emax = nums[1]
-                    etype = 'Hour Angle'
-                    # print('Read Hour',self.elev_const[i])
-               elif obs.elev_const[i].find('Airmass') != -1:
-                    nums = re.findall(r'\d+.\d+', obs.elev_const[i])
-                    # print('Read Airmass',AirmassConstraint(min=float(nums[0]),max=float(nums[1])))
-                    emin = nums[0]
-                    emax = nums[1]
-                    etype = 'Airmass'
-               else:
-                    print('Could not read elevation constraint from catalog = ', obs.elev_const[i])
-                    None
-               elev = {'type': etype, 'min': float(emin), 'max': float(emax)}
-
-               if verbose:
-                    print('Obs. weights: ',obs.obs_id[i])
-                    print('dec',obs.dec[i])
-                    print('latitude',site.location.lat)
-                    print('band',obs.band[i])
-                    print('user_prior',obs.user_prior[i])
-                    print('status',obs.comp_time[i])
-                    print('elevation constraint ',elev)
-                    print('condition constraints',cond)
-                    print('actual conditions',acond)
-
-               targetinfo[i].weight = obsweight(dec=targetinfo[i].dec, AM=targetinfo[i].AM,
+            targetinfo[i].weight = obsweight(dec=targetinfo[i].dec, AM=targetinfo[i].AM,
                                          HA=targetinfo[i].HA, AZ=targetinfo[i].AZ, band=obs.band[i],
-                                         user_prior=obs.user_prior[i], status=obs.comp_time[i],
+                                         user_prior=obs.user_prior[i], prstatus=prstatus,
                                          latitude=site.location.lat, cond=cond, acond=actualcond,
-                                         obs_time=obs.obs_time[i], wra=hhra[ii], elev=elev)
-          else:
-               targetinfo[i].weight = np.zeros(nt)
+                                         obstatus=obs.obs_time[i], wra=wra[ii], elev=elev)
+        else:
+            targetinfo[i].weight = np.zeros(nt)
 
 
-     return targetinfo
+    return targetinfo

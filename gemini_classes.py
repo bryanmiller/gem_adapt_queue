@@ -4,12 +4,8 @@ import astropy.units as u
 from conversions import conditions
 from calc_ZDHA import calc_ZDHA
 from astropy import time
-from astropy.coordinates import (EarthLocation,get_sun,get_moon,angles)
-from astroplan import Observer
-
-
-__all__ = ["Gemini_classes"]
-
+from astropy.coordinates import (EarthLocation, get_sun, get_moon, angles)
+from astroplan import (Observer)
 
 def hms_to_hr(timestring): # convert 'HH:MM:SS' string to hours
     (h, m, s) = timestring.split(':')
@@ -113,17 +109,17 @@ class TimeInfo(object):
         Parameters
         ----------
 
-        dt : astropy.units.Quantity
+        dt : 'astropy.units.quantity.Quantity'
             size of time interval (defaults to 0.1 hours).
 
         nt : int
             number of time intervals in observation window
 
-        utc : array of astropy.time.core.Time objects
+        utc : array of 'astropy.time.core.Time' objects
             utc times at time intervals
 
-        lst : array of astropy.unit hourangle
-            lst times at intervals
+        lst : array of 'astropy.units.quantity.Quantity's
+            lst hourangle times at intervals
 
         evening_twilight : astropy.time.Time
             utc evening nautical twilight
@@ -144,9 +140,13 @@ class TimeInfo(object):
         midnight : astropy.time.Time
             utc time at solar midnight
 
-        night_length : astropy.units hour
+        night_length : 'astropy.units.quantity.Quantity'
             hours between twilights
         """
+        timer = False
+        if timer:
+            import time as t
+            timerstart = t.time()  # runtime clock
 
         self.site = _checkinput_site(site=site, latitude=latitude, longitude=longitude, elevation=elevation)
 
@@ -193,6 +193,8 @@ class TimeInfo(object):
         self.start = start_time
         self.end = end_time
 
+        if timer: print('\n\tInitialize TimeInfo: ', t.time() - timerstart)  # runtime clock
+
     def __repr__(self):
 
         """
@@ -238,36 +240,38 @@ class TimeInfo(object):
         """
         Table representation of gemini_classes.TimeInfo object
         """
+        table = []
+
         sattr = '\t\t{0:<25s}{1}'  # print string and string
         fattr = '\t\t{0:<25s}{1:.2f}'  # print string and float
 
         class_name = self.__class__.__name__
         attr_names = ['dt', 'nt', 'evening_twilight', 'morning_twilight',
                       'start', 'end', 'midnight', 'night_length']
-        print('\n\t'+class_name+':')
+        table.append(str('\n\t'+class_name+':'))
         attr_values = [getattr(self, attr) for attr in attr_names]
         for name, value in zip(attr_names, attr_values):
             if value is not None:
                 if name=='evening_twilight' or name=='morning_twilight'\
                     or name=='start' or name=='end' or name=='midnight':
-                    print(sattr.format(name, value.iso))
+                    table.append(str(sattr.format(name, value.iso)))
                 elif name=='night_length':
-                    print(fattr.format(name, value))
+                    table.append(str(fattr.format(name, value)))
                 else:
-                    print(sattr.format(name, value))
+                    table.append(str(sattr.format(name, value)))
 
         if showall:
             fheader = '\t\t{0:<25.22s}{1:<25.20s}'
             fvals = '\t\t{0:<25.22}{1:<7.5}'
             attr_names = ['utc', 'lst']
-            print('')
-            print(fheader.format('utc','lst'))
-            print(fheader.format('--------','--------'))
+            table.append(str(''))
+            table.append(str(fheader.format('utc','lst')))
+            table.append(str(fheader.format('--------','--------')))
             attr_values = [getattr(self, attr) for attr in attr_names]
             for i in range(0, len(attr_values[0])):
-                print(fvals.format(attr_values[0][i].iso, attr_values[1][i]))
+                table.append(str(fvals.format(attr_values[0][i].iso, attr_values[1][i])))
 
-
+        return table
 
 
 class SunInfo(object):
@@ -328,7 +332,12 @@ class SunInfo(object):
 
         """
 
-        _checkinput_site(site=site,latitude=latitude,longitude=longitude, elevation=elevation)
+        timer = False
+        if timer:
+            import time as t
+            timerstart = t.time()  # runtime clock
+
+        self.site = _checkinput_site(site=site,latitude=latitude,longitude=longitude, elevation=elevation)
         _checkinput_time(variable=utc_times,varname='utc_times')
 
         # sunset/sunrise times
@@ -342,8 +351,10 @@ class SunInfo(object):
         self.ra = sun_pos.ra
         self.dec = sun_pos.dec
         lst_times = site.local_sidereal_time(utc_times)
-        self.ZD,self.HA,self.AZ = calc_ZDHA(lst=lst_times,longitude=site.location.lon,
-                                            latitude=site.location.lat,ra=sun_pos.ra,dec=sun_pos.dec)
+        self.ZD,self.HA,self.AZ = calc_ZDHA(lst=lst_times, latitude=site.location.lat, ra=sun_pos.ra, dec=sun_pos.dec)
+
+        if timer: print('\n\tInitialize SunInfo: ', t.time() - timerstart)  # runtime clock
+
     def __repr__(self):
 
         """
@@ -366,31 +377,31 @@ class SunInfo(object):
         """
         sattr = '\t\t{0:<25s}{1}'  # print string and string
         fattr = '\t\t{0:<25s}{1:.2f}'  # print string and float
+        table = []
 
         class_name = self.__class__.__name__
         attr_names = ['ra', 'dec', 'set', 'rise']
-        print('\n\t'+class_name+':')
+        table.append(str('\n\t'+class_name+':'))
         attr_values = [getattr(self, attr) for attr in attr_names]
         for name, value in zip(attr_names, attr_values):
             if value is not None:
                 if name=='set' or name=='rise':
-                    print(sattr.format(name, value.iso))
+                    table.append(str(sattr.format(name, value.iso)))
                 else:
-                    print(fattr.format(name, value))
+                    table.append(str(fattr.format(name, value)))
 
         if showall:
             fheader = '\t\t{0:<20s}{1:<20s}{2:<20s}'
             fvals = '\t\t{0:<20.10}{1:<20.15}{2:<20.10}'
             attr_names = ['ZD', 'HA', 'AZ']
             attr_values = [getattr(self, attr) for attr in attr_names]
-            print('')
-            print(fheader.format('ZD', 'HA', 'AZ'))
-            print(fheader.format(attr_values[0][0].unit,attr_values[1][0].unit,attr_values[2][0].unit))
-            print(fheader.format('--------', '--------', '--------'))
+            table.append(str(''))
+            table.append(str(fheader.format('ZD', 'HA', 'AZ')))
+            table.append(str(fheader.format(attr_values[0][0].unit,attr_values[1][0].unit,attr_values[2][0].unit)))
+            table.append(str(fheader.format('--------', '--------', '--------')))
             for i in range(0, len(attr_values[0])):
-                print(fvals.format(str(attr_values[0][i]), str(attr_values[1][i]), str(attr_values[2][i])))
-
-
+                table.append(str(fvals.format(str(attr_values[0][i]), str(attr_values[1][i]), str(attr_values[2][i]))))
+        return table
 
 
 class MoonInfo(object):
@@ -468,7 +479,12 @@ class MoonInfo(object):
 
         """
 
-        _checkinput_site(site=site, latitude=latitude, longitude=longitude, elevation=elevation)
+        timer = False
+        if timer:
+            import time as t
+            timerstart = t.time()  # runtime clock
+
+        self.site = _checkinput_site(site=site, latitude=latitude, longitude=longitude, elevation=elevation)
         _checkinput_time(variable=utc_times, varname='utc_times')
 
         sun_horiz = sun_horizon(site)  # compute sun set/rise angle from zenith
@@ -478,18 +494,19 @@ class MoonInfo(object):
         self.rise = site.moon_rise_time(utc_times[0], which='nearest', horizon=sun_horiz)
         self.fraction = site.moon_illumination(solar_midnight)
         self.phase = site.moon_phase(solar_midnight)
-        moon_pos = get_moon(solar_midnight)
+        moon_pos = get_moon(solar_midnight,  location=self.site.location)
         self.ramid = moon_pos.ra
         self.decmid = moon_pos.dec
 
         # moon position at time intervals
-        moon_pos = get_moon(utc_times)
+        moon_pos = get_moon(utc_times, location=self.site.location)
         self.ra = moon_pos.ra
         self.dec = moon_pos.dec
         lst_times = site.local_sidereal_time(utc_times)
-        self.ZD,self.HA,self.AZ = calc_ZDHA(lst=lst_times,longitude=site.location.lon,
-                                            latitude=site.location.lat,ra=moon_pos.ra,dec=moon_pos.dec)
+        self.ZD,self.HA,self.AZ = calc_ZDHA(lst=lst_times, latitude=site.location.lat, ra=moon_pos.ra, dec=moon_pos.dec)
         self.AM = airmass(self.ZD)
+
+        if timer: print('\n\tInitialize MoonInfo: ', t.time() - timerstart)  # runtime clock
 
     def __repr__(self):
 
@@ -513,37 +530,38 @@ class MoonInfo(object):
         """
         sattr = '\t\t{0:<25s}{1}'  # print string and float
         fattr = '\t\t{0:<25s}{1:.2f}'  # print string and float
+        table = []
 
         class_name = self.__class__.__name__
         attr_names = ['ramid','decmid','fraction','phase','rise','set']
-        print('\n\t'+class_name+':')
+        table.append(str('\n\t'+class_name+':'))
         attr_values = [getattr(self, attr) for attr in attr_names]
         for name, value in zip(attr_names, attr_values):
             if value is not None:
                 if name=='set' or name=='rise':
-                    print(sattr.format(name, value.iso))
+                    table.append(str(sattr.format(name, value.iso)))
                 elif name=='ramid':
-                    print(fattr.format('ra', value))
+                    table.append(str(fattr.format('ra', value)))
                 elif name == 'decmid':
-                    print(fattr.format('dec', value))
+                    table.append(str(fattr.format('dec', value)))
                 else:
-                    print(fattr.format(name, value))
+                    table.append(str(fattr.format(name, value)))
 
         if showall:
             fheader = '\t\t{0:<12s}{1:<12s}{2:<12s}{3:<17s}{4:<12s}{5:<12s}'
             fvals = '\t\t{0:<12.8}{1:<12.8}{2:<12.8}{3:<17.13}{4:<12.8}{5:<12.8}'
             attr_names = ['ra','dec','ZD','HA','AZ','AM']
             attr_values = [getattr(self, attr) for attr in attr_names]
-            print('')
-            print(fheader.format('ra','dec','ZD', 'HA', 'AZ', 'AM'))
-            print(fheader.format(attr_values[0][0].unit,attr_values[1][0].unit,attr_values[2][0].unit,\
-                                 attr_values[3][0].unit,attr_values[4][0].unit,''))
-            print(fheader.format('--------', '--------', '--------','--------', '--------', '--------'))
+            table.append(str(''))
+            table.append(str(fheader.format('ra','dec','ZD', 'HA', 'AZ', 'AM')))
+            table.append(str(fheader.format(attr_values[0][0].unit,attr_values[1][0].unit,attr_values[2][0].unit,\
+                                 attr_values[3][0].unit,attr_values[4][0].unit,'')))
+            table.append(str(fheader.format('--------', '--------', '--------','--------', '--------', '--------')))
             for i in range(0, len(attr_values[0])):
-                print(fvals.format(str(attr_values[0][i]),str(attr_values[1][i]),\
+                table.append(str(fvals.format(str(attr_values[0][i]),str(attr_values[1][i]),\
                                     str(attr_values[2][i]),str(attr_values[3][i]),\
-                                    str(attr_values[4][i]), str(attr_values[5][i])))
-
+                                    str(attr_values[4][i]), str(attr_values[5][i]))))
+        return table
 
 
 
@@ -552,9 +570,8 @@ class TargetInfo(object):
     A container class for storing all required target parameters
     for a given night (or similar time window).
     """
-    pass
 
-
+    @u.quantity_input(elevation=u.m)
     def __init__(self, site=None, utc_times=None, name='', ra=None, dec=None,
                  latitude=None, longitude=None, elevation=0.0 * u.m):
         """
@@ -606,10 +623,10 @@ class TargetInfo(object):
             declination of moon at solar midnight
 
         ra : 'astropy.coordinates.angles.Longitude'
-            right ascension at times in utc_times
+            right ascension
 
         dec : 'astropy.coordinates.angles.Latitude'
-            declination at times in utc_times
+            declination
 
         ZD : 'astropy.units.quantity.Quantity'
             zenith distance angle at times in utc_times
@@ -639,6 +656,10 @@ class TargetInfo(object):
             attribute for string observation weights computed
             at times in utc_times
         """
+        timer = False
+        if timer:
+            import time as t
+            timerstart = t.time()  # runtime clock
 
         _checkinput_site(site=site, latitude=latitude, longitude=longitude, elevation=elevation)
         _checkinput_time(variable=utc_times, varname='utc_times')
@@ -648,13 +669,14 @@ class TargetInfo(object):
         self.name = name
 
         lst_times = site.local_sidereal_time(utc_times)
-        self.ZD, self.HA, self.AZ = calc_ZDHA(lst=lst_times, longitude=site.location.lon,
-                                              latitude=site.location.lat, ra=ra, dec=dec)
+        self.ZD, self.HA, self.AZ = calc_ZDHA(lst=lst_times, latitude=site.location.lat, ra=ra, dec=dec)
         self.AM = airmass(self.ZD)
         self.mdist = None
         self.vsb = None
         self.bg = None
         self.weight = None
+
+        if timer: print('Initialize TargetInfo: ', t.time() - timerstart)  # runtime clock
 
     def __repr__(self):
 
@@ -698,9 +720,9 @@ class Gobservations(object):
     partner             (string)                gemini partner name
     obs_status          (string)                'ready' status of observation
     tot_time            (astropy hours)         total planned observation time
-    comp_time           (float)                 fraction of completed/total observation time
-    obs_time            (astropy hours)         scheduled time (initially 0 hours at program start)
-    charged_time        (string)                HH:MM:SS (required to compute comp_time)
+    obs_time            (astropy hours)         completed observation time
+    obs_comp            (float)                 fraction of completed/total observation time
+    charged_time        (string)                HH:MM:SS (required to compute obs_comp)
     obs_class           (string)                observation class
     iq                  (float)                 image quality constraint (percentile converted to decimal value) 
     cc                  (float)                 cloud condition constraint (percentile converted to decimal value) 
@@ -723,6 +745,11 @@ class Gobservations(object):
 
     def __init__(self, catinfo=None, i_obs=None):
 
+        timer = False
+        if timer:
+            import time as t
+            timerstart = t.time()  # runtime clock
+
         n_obs = len(i_obs)
 
         # copy required strings from catalog object 
@@ -739,7 +766,7 @@ class Gobservations(object):
         # self.qa_status = catinfo.obs_qa[i_obs]
         # self.dataflow_step = catinfo.dataflow_step[i_obs]
         self.tot_time = catinfo.planned_exec_time[i_obs]
-        self.comp_time = np.zeros(n_obs)
+        self.obs_comp = np.zeros(n_obs)
         # self.planned_pi_time = catinfo.planned_pi_time[i_obs]
         self.charged_time = catinfo.charged_time[i_obs]
         self.obs_time = self.charged_time
@@ -893,26 +920,23 @@ class Gobservations(object):
         # Convert condition contraints from strings to decimal values
         self.iq,self.cc,self.bg,self.wv = conditions(self.iq,self.cc,self.bg,self.wv)
 
-
-
-
         # Convert completed and total times.
         for i in range(0,n_obs): #cycle through selected observations
             #compute observed/total time, add additional time if necessary
             charged_time = hms_to_hr(self.charged_time[i])
             tot_time = hms_to_hr(self.tot_time[i])
             if (charged_time>0.):
-                if (self.disperser[i]=='Mirror'):
+                if 'Mirror' in self.disperser[i]:
                     tot_time = tot_time + 0.2
                 else:
                     tot_time = tot_time + 0.3
-            self.comp_time[i] = charged_time/tot_time
+            self.obs_comp[i] = charged_time / tot_time
             self.tot_time[i] = tot_time
             self.obs_time[i] = charged_time
         self.obs_time = np.array(self.obs_time, dtype=float) * u.h
         self.tot_time = np.array(self.tot_time, dtype=float) * u.h
 
-
+        if timer: print('\n\tInitialize Gobservations: ', t.time() - timerstart)  # runtime clock
 
 
 class Gcatfile(object):

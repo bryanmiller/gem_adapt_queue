@@ -43,6 +43,6 @@ if __name__=='__main__':
     print('\tpoint 1(ra,dec): ('+str(ra1)+', '+str(dec1)+')')
     print('\tpoint 2(ra,dec): (' + str(ra2) + ', ' + str(dec2) + ')')
     print('output: ',gcirc(ra1,dec1,ra2,dec2).round(8))
-    print('expected output: ', '5/6 * pi -->', (5/6*np.pi*u.rad).round(8))
+    print('expecting 5*pi/6... output: ', (5/6*np.pi*u.rad).round(8))
     assert(gcirc(ra1,dec1,ra2,dec2).round(8)==(5*np.pi/6*u.rad).round(8))
     print('Test successful!')
