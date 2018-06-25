@@ -15,35 +15,91 @@ def percent_string(percentile):
     """
     return str(int(round(percentile,2)*100))+'%'
 
-def gauss_cond():
-    """
-    Generate random iq, cc, wv condition percentiles
-    and return as strings.
-    i.e. iq,cc,wv = '73%','92%','3%'.
-    """
-    verbose = False
+class condgen(object):
 
-    def gauss_percentile():
+    def __init__(self, iq=1., cc=1., wv=1.):
         """
-        Generate randon number from gaussian distribtion. 
-        Return as string percentile rounded to nearest percent.
+        Generate image quality, cloud condition, and water vapor
+        condition percentiles.
+
+        parameters
+        ----------
+        iq : int
+            image quality percentile condition rounded to nearest integer
+
+        cc : int
+            cloud condition percentile condition rounded to nearest integer
+
+        wv : int
+            water vapor percentile condition rounded to nearest integer
+
+        class methods
+        -------------
+        gauss : generate random conditions from a gaussian distribution
         """
-        rand = abs(random.gauss(0,1))
-        percentile = st.norm.cdf(rand)-st.norm.cdf(-rand)
-        return percent_string(percentile)
 
-    iq = gauss_percentile()
-    cc = gauss_percentile()
-    wv = gauss_percentile()
-    
-    if verbose:
-        print('iq = ',iq)
-        print('cc = ',cc)
-        print('wv = ',wv)
+        self.iq = iq
+        self.cc = cc
+        self.wv = wv
 
-    return iq, cc, wv
+    @classmethod
+    def gauss(cls):
+        """
+        Generate random iq, cc, wv condition percentiles
+        and return as strings.
+        i.e. iq,cc,wv = '73%','92%','3%'.
+        """
+        verbose = False
 
+        def gauss_percentile():
+            """
+            Generate randon number from gaussian distribtion.
+            Return as string percentile rounded to nearest percent.
+            """
+            rand = abs(random.gauss(0,1))
+            percentile = st.norm.cdf(rand)-st.norm.cdf(-rand)
+            return percent_string(percentile)
 
+        iq = gauss_percentile()
+        cc = gauss_percentile()
+        wv = gauss_percentile()
+
+        if verbose:
+            print('iq = ',iq)
+            print('cc = ',cc)
+            print('wv = ',wv)
+
+        return cls(iq=iq, cc=cc, wv=wv)
+
+class wind(object):
+
+    def __init__(self, site):
+
+        if site.name == 'gemini_south':
+            dir = 330. * u.deg
+            dsig = 20. * u.deg
+            vel = 5. * u.km / u.h
+            vsig = 3. * u.km / u.h
+        elif site.name == 'gemini_north':
+            dir = 330. * u.deg
+            dsig = 20. * u.deg
+            vel = 5. * u.km / u.h
+            vsig = 3. * u.km / u.h
+        else:
+            dir = 0. * u.deg
+            dsig = 0. * u.deg
+            vel = 0. * u.km / u.h
+            vsig = 0. * u.km / u.h
+
+        wdir = random.gauss(dir, dsig)
+        if wdir>360*u.deg:
+            wdir = wdir - 360*u.deg
+        self.dir = wdir
+
+        wvel = random.gauss(vel, vsig)
+        if wvel<0. * u.km/u.h:
+            wvel = 0. * u.km/u.h
+        self.vel = wvel
 
 def test(pp,function):
 

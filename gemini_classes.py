@@ -3,8 +3,8 @@ import numpy as np
 import astropy.units as u
 from conversions import conditions
 from calc_ZDHA import calc_ZDHA
-from astropy import time
-from astropy.coordinates import (EarthLocation, get_sun, get_moon, angles)
+import astropy.time as time
+from astropy.coordinates import (SkyCoord, FK5, EarthLocation, get_sun, get_moon)
 from astroplan import (Observer)
 
 def hms_to_hr(timestring): # convert 'HH:MM:SS' string to hours
@@ -488,21 +488,37 @@ class MoonInfo(object):
         _checkinput_time(variable=utc_times, varname='utc_times')
 
         sun_horiz = sun_horizon(site)  # compute sun set/rise angle from zenith
+        if timer: print('\n\tInitialize MoonInfo horiz: ', t.time() - timerstart)  # runtime clock
+
         solar_midnight = site.midnight(utc_times[0], which='nearest')  # get local midnight in utc time
+        if timer: print('\tInitialize MoonInfo midnight: ', t.time() - timerstart)  # runtime clock
 
         self.set = site.moon_set_time(utc_times[0], which='next', horizon=sun_horiz)
+        if timer: print('\tInitialize MoonInfo set: ', t.time() - timerstart)  # runtime clock
+
         self.rise = site.moon_rise_time(utc_times[0], which='nearest', horizon=sun_horiz)
+        if timer: print('\tInitialize MoonInfo rise: ', t.time() - timerstart)  # runtime clock
+
         self.fraction = site.moon_illumination(solar_midnight)
+        if timer: print('\tInitialize MoonInfo illum: ', t.time() - timerstart)  # runtime clock
+
         self.phase = site.moon_phase(solar_midnight)
+        if timer: print('\tInitialize MoonInfo phase: ', t.time() - timerstart)  # runtime clock
+
         moon_pos = get_moon(solar_midnight,  location=self.site.location)
         self.ramid = moon_pos.ra
         self.decmid = moon_pos.dec
+        if timer: print('\tInitialize MoonInfo ra,dec at midnight: ', t.time() - timerstart)  # runtime clock
 
         # moon position at time intervals
         moon_pos = get_moon(utc_times, location=self.site.location)
         self.ra = moon_pos.ra
         self.dec = moon_pos.dec
+        if timer: print('\tInitialize MoonInfo ras,decs: ', t.time() - timerstart)  # runtime clock
+
         lst_times = site.local_sidereal_time(utc_times)
+        if timer: print('\tInitialize MoonInfo lst: ', t.time() - timerstart)  # runtime clock
+
         self.ZD,self.HA,self.AZ = calc_ZDHA(lst=lst_times, latitude=site.location.lat, ra=moon_pos.ra, dec=moon_pos.dec)
         self.AM = airmass(self.ZD)
 
@@ -696,6 +712,33 @@ class TargetInfo(object):
 
 
 
+def convert_elev(elev_const):
+    """
+    Convert elevation constraint for observation and return as a dictionary
+        of the form {'type':string,'min':float,'max':float}
+
+    Input
+    -------
+    elev_const : string
+        elevation constraint type and limits
+        (eg. elev_const = '{Hour Angle -2.00 2.00}')
+
+    Returns
+    --------
+    dictionary
+        (eg. elev = {'type':'Airmass', 'min':0.2, 'max':0.8})
+    """
+    if (elev_const.find('None') != -1) or (elev_const.find('null') != -1) or (elev_const.find('*NaN') != -1):
+        return {'type': 'None', 'min': 0., 'max': 0.}
+    elif elev_const.find('Hour') != -1:
+        nums = re.findall(r'[+-]?\d+(?:\.\d+)?', elev_const)
+        return {'type': 'Hour Angle', 'min': float(nums[0])* u.hourangle, 'max': float(nums[1])* u.hourangle}
+    elif elev_const.find('Airmass') != -1:
+        nums = re.findall(r'[+-]?\d+(?:\.\d+)?', elev_const)
+        return {'type': 'Airmass', 'min': float(nums[0]), 'max': float(nums[1])}
+    else:
+        raise TypeError('Could not determine elevation constraint from string: ', elev_const)
+
 class Gobservations(object):
     """
     A container class for gemini program information.
@@ -745,7 +788,7 @@ class Gobservations(object):
 
     def __init__(self, catinfo=None, i_obs=None):
 
-        timer = False
+        timer = True
         if timer:
             import time as t
             timerstart = t.time()  # runtime clock
@@ -779,7 +822,7 @@ class Gobservations(object):
         # self.ao = catinfo.ao[i_obs]
         self.group = catinfo.group[i_obs]
         # self.group_type = catinfo.gt[i_obs]
-        self.elev_const = catinfo.elev_const[i_obs]
+        self.elev_const = [convert_elev(catinfo.elev_const[i]) for i in i_obs]
         # self.time_const = catinfo.time_const[i_obs]
         self.ready = np.array(list(map(bool, catinfo.ready[i_obs])))
         # self.color_filter = catinfo.color_filter[i_obs]
@@ -917,7 +960,7 @@ class Gobservations(object):
             if self.wv[i][0:1] == 'P': self.wv[i] == self.wv[i][8:10]
             if self.wv[i][0:1] == 'A': self.wv[i] == 'Any'
 
-        # Convert condition contraints from strings to decimal values
+        # Convert condition constraints from strings to decimal values
         self.iq,self.cc,self.bg,self.wv = conditions(self.iq,self.cc,self.bg,self.wv)
 
         # Convert completed and total times.
@@ -936,8 +979,14 @@ class Gobservations(object):
         self.obs_time = np.array(self.obs_time, dtype=float) * u.h
         self.tot_time = np.array(self.tot_time, dtype=float) * u.h
 
-        if timer: print('\n\tInitialize Gobservations: ', t.time() - timerstart)  # runtime clock
+        # Get target coordinates for current epoch
+        starttime = time.Time.now()
+        coord_j2000 = SkyCoord(self.ra, self.dec, frame='icrs', unit=(u.deg, u.deg))
+        current_epoch = coord_j2000.transform_to(FK5(equinox='J' + str(starttime.jyear)))
+        self.ra = current_epoch.ra
+        self.dec = current_epoch.dec
 
+        if timer: print('\n\tInitialize Gobservations: ', t.time() - timerstart)  # runtime clock
 
 class Gcatfile(object):
 

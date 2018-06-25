@@ -525,7 +525,7 @@ def calc_weight(site,obs,timeinfo,targetinfo,acond):
                 print('acond', actualcond)
 
             # ========= convert elevation constraint ==========
-            elev = convert_elev(elev_const=obs.elev_const[i])
+            # elev = convert_elev(elev_const=obs.elev_const[i])
 
             if verbose:
                 print('Obs. id: ',obs.obs_id[i])
@@ -542,7 +542,7 @@ def calc_weight(site,obs,timeinfo,targetinfo,acond):
                                          HA=targetinfo[i].HA, AZ=targetinfo[i].AZ, band=obs.band[i],
                                          user_prior=obs.user_prior[i], prstatus=prstatus,
                                          latitude=site.location.lat, cond=cond, acond=actualcond,
-                                         obstatus=obs.obs_time[i], wra=wra[ii], elev=elev)
+                                         obstatus=obs.obs_time[i], wra=wra[ii], elev=obs.elev_const[i])
         else:
             targetinfo[i].weight = np.zeros(nt)
 

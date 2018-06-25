@@ -260,7 +260,7 @@ conddist = False
 if distribution is not None:
     conddist = True
     if distribution=='gaussian' or distribution=='g':
-        cond_func = condgen.gauss_cond
+        cond_func = condgen.condgen.gauss
     else:
         print('\n\''+str(distribution)+'\' is not an accepted distribution type.'
                                        ' Refer to program help using \'-h\' and try again.')
@@ -382,27 +382,31 @@ for i_day in count_day: #cycle through observation days
     print('\n\n\t_______________________ Night of '+date+' _______________________')
 
     if conddist: # generate random sky conditions from selected distribution
-        iq,cc,wv = cond_func()
-    acond = actual_conditions(iq,cc,'Any',wv) # convert actual conditions to decimal values
+        randcond = cond_func()
+    acond = actual_conditions(randcond.iq,randcond.cc,'Any',randcond.wv) # convert actual conditions to decimal values
     print('\n\tSky conditions (iq,cc,wv): {0} , {1} , {2}'.format(acond[0], acond[1], acond[3]))
 
     # calculate time dependent parameters for observing window
     timeinfo, suninfo, mooninfo, targetinfo = calc_night(obs=obs, site=site, starttime=night_start_utc,
                                                          utc_to_local=utc_to_local)
 
-    import time as t
-    timer = t.time()
+    ttimer = False
+    if ttimer:
+        import time as t
+        timer = t.time()
 
     # compute mdist and visible sky brightness using parallel processes.
     mdists = Parallel(n_jobs=10)(delayed(gcirc.gcirc)(mooninfo.ra, mooninfo.dec, target.ra,
                                    target.dec) for target in targetinfo)
     for i in range(len(mdists)):
         targetinfo[i].mdist=mdists[i]
+    if ttimer: print('\n\tTime to calc mdist: ', t.time() - timer)
+
     vsbs = Parallel(n_jobs=10)(delayed(sb.sb)(mpa=mooninfo.phase, mdist=target.mdist, mZD=mooninfo.ZD, ZD=target.ZD, sZD=suninfo.ZD,
                            cc=acond[1]) for target in targetinfo)
     for i in range(len(vsbs)):
         targetinfo[i].vsb = vsbs[i]
-    # print('\n Time to calc vsb. mdist: ', t.time() - timer)
+    if ttimer: print('\n\tTime to calc vsb: ', t.time() - timer)
 
     # calculate weights
     weightinfo = calc_weight(site=site, obs=obs, timeinfo=timeinfo, targetinfo=targetinfo, acond=acond)
