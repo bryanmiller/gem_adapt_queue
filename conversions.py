@@ -146,7 +146,9 @@ def actual_conditions( iq, cc, bg, wv):
             iq = 0.2
         elif 0.2< iq <= 0.5:
             iq = 0.5
-        elif 0.5< iq <= 0.85:
+        elif 0.5< iq <= 0.7:
+            iq = 0.7
+        elif 0.7< iq <= 0.85:
             iq = 0.85
         else:
             iq = 1.

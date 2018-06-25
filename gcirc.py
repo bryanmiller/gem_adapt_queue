@@ -1,6 +1,5 @@
 import numpy as np
 
-
 #Matt Bonnyman
 #May 22, 2018
 
@@ -9,13 +8,17 @@ def gcirc(ra1,dec1,ra2,dec2):
     
     Parameter
     ---------
-    ra1 :
+    ra1 : 'astropy.units.quantity.Quantity'
+        right ascension of first point
 
-    dec1 :
+    dec1 : 'astropy.units.quantity.Quantity'
+        declination of first point
 
-    ra2 :
+    ra2 : 'astropy.units.quantity.Quantity'
+        right ascension of second point
 
-    dec2 :
+    dec2 : 'astropy.units.quantity.Quantity'
+        declination of second point
     """
 
     #more rigorous great circle angular distance calculation.
@@ -25,11 +28,6 @@ def gcirc(ra1,dec1,ra2,dec2):
     distance_rad = 2.0*np.arcsin(sin_theta)
 
     return distance_rad #return distance in degrees
-
-    #original version used angular distance
-    #cos_theta = (np.sin(dec2/decrad)*np.sin(dec1/decrad)) +\
-    #    (np.cos(dec2/decrad)*np.cos(dec1/decrad)*np.cos((ra2/decrad)-(ra1/decrad)))
-    #radian_distance = np.arccos(cos_theta)
 
 if __name__=='__main__':
     import astropy.units as u
@@ -42,7 +40,8 @@ if __name__=='__main__':
     print('input: ')
     print('\tpoint 1(ra,dec): ('+str(ra1)+', '+str(dec1)+')')
     print('\tpoint 2(ra,dec): (' + str(ra2) + ', ' + str(dec2) + ')')
-    print('output: ',gcirc(ra1,dec1,ra2,dec2).round(8))
-    print('expecting 5*pi/6... output: ', (5/6*np.pi*u.rad).round(8))
+    print('output:')
+    print('\t'+str(gcirc(ra1,dec1,ra2,dec2).round(8)))
+    print('was expecting 5*pi/6...')
     assert(gcirc(ra1,dec1,ra2,dec2).round(8)==(5*np.pi/6*u.rad).round(8))
     print('Test successful!')
