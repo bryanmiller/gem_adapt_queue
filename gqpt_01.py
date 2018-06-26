@@ -361,14 +361,14 @@ obs = Gobservations(catinfo=otcat,i_obs=i_obs)
 
 # ====================== Initialize statistics logfile ========================
 statfilename = 'logfile'+current_local.isot+'.log'
+# statfilename = 'testlogfile.log'
+
 # statfilename = 'logfile.log'
 _init_logfile(filename=statfilename, catalogfile=otfile, site=site, start=local_start, n_nights=len(count_day),
               dst=dst)
 
 semesterinfo = {'night_time':0.*u.h,'used_time':0.*u.h}
 _log_progstats(filename=statfilename, obs=obs, semesterinfo=semesterinfo, description='Initial completion status...')
-
-
 
 print('\n\tOuput file: '+statfilename)
 # =================================== Begin Queueing ==============================================
@@ -383,7 +383,11 @@ for i_day in count_day: #cycle through observation days
 
     if conddist: # generate random sky conditions from selected distribution
         randcond = cond_func()
-    acond = actual_conditions(randcond.iq,randcond.cc,'Any',randcond.wv) # convert actual conditions to decimal values
+        iq = randcond.iq
+        cc = randcond.cc
+        wv = randcond.wv
+
+    acond = actual_conditions(iq, cc, 'Any', wv) # convert actual conditions to decimal values
     print('\n\tSky conditions (iq,cc,wv): {0} , {1} , {2}'.format(acond[0], acond[1], acond[3]))
 
     # calculate time dependent parameters for observing window
@@ -426,6 +430,4 @@ for i_day in count_day: #cycle through observation days
     amplot(plan=plan, timeinfo=timeinfo, mooninfo=mooninfo, targetinfo=targetinfo)
 
 _log_progstats(filename=statfilename, obs=obs, semesterinfo=semesterinfo, description='Schedule results...')
-
-
 exit()

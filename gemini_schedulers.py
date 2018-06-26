@@ -1,7 +1,8 @@
-import scipy
+import matplotlib.pyplot as plt
 import numpy as np
 import astropy.units as u
 from intervals import intervals
+from matplotlib.backends.backend_pdf import PdfPages
 
 def _optimize_plan(plan, targetinfo):
 
@@ -78,10 +79,8 @@ def _optimize_plan(plan, targetinfo):
     else:
         return plan
 
-
 def _plan_details(plan, targetinfo):
-
-    # get stats while building final plan
+    # gather obs. IDs and start/end index of schedule blocks
     obslist = []  # observation names
     i_start = []  # observing index start
     i_end = []  # observing index end
@@ -103,7 +102,81 @@ def _plan_details(plan, targetinfo):
             i = i+1
     return obslist, np.array(i_start, dtype=int), np.array(i_end, dtype=int)
 
+def _init_planbuildplot(timeinfo):
+    """
+    Create plot figure and PdfPages class object for plan build plots.
 
+    Inputs
+    ---------
+    timeinfo : '~gemini_classes.TimeInfo'
+        TimeInfo object
+
+    Returns
+    ---------
+    pp : class 'matplotlib.backends.backend_pdf.PdfPages'
+        PdfPages class object for plot
+    """
+    # pp = PdfPages(str(timeinfo.utc[0].iso)[:10]+'_amplot_gif.pdf')
+    date = str(timeinfo.local[0].iso)[0:10]
+    pp = PdfPages('amplotbuild'+date+'.pdf')
+    plt.xlim(timeinfo.utc[0].plot_date, timeinfo.utc[-1].plot_date)
+    plt.ylim(2.1, 0.9)
+    plt.ylabel('Airmass')
+    plt.xlabel('UTC')
+    return pp
+
+def _close_planbuildplot(pp):
+    """
+    Save and close plan build plot.
+
+    Inputs
+    ----------
+    pp : class 'matplotlib.backends.backend_pdf.PdfPages'
+        PdfPages class object for plot
+    """
+    pp.close()
+    plt.clf()
+    return
+
+def _plotam_planbuildplot(pp, timeinfo, targetinfo, i, jstart, jend):
+    """
+    Add target airmass to existing plot.
+    Plot entire airmass as thin black line.
+    Plot scheduled portion as thick colored line.
+    Save figure to pdf.
+
+    Inputs
+    ----------
+    pp : class 'matplotlib.backends.backend_pdf.PdfPages'
+        PdfPages class object for plot
+
+    timeinfo : '~gemini_classes.TimeInfo'
+        TimeInfo object
+
+    targetinfo : '~gemini_classes.TargetInfo'
+        list of TargetInfo objects
+
+    i : int
+        index of selected target in targetinfo
+
+    jstart : int
+        index of scheduled start time in timeinfo
+
+    jend : int
+        index of scheduled end time in timeinfo
+    """
+
+    plt.plot_date(timeinfo.utc.plot_date, targetinfo[i].AM, linestyle='-', linewidth=1,
+                  color='black', markersize=0)
+    plt.plot_date(timeinfo.utc[jstart:jend+1].plot_date, targetinfo[i].AM[jstart:jend+1], linestyle='-',
+                  linewidth=4, markersize=0, label=targetinfo[i].name[-10:])
+    plt.annotate(targetinfo[i].name[-9:],
+                 (timeinfo.utc[int((jstart+jend+1)/2)].plot_date, targetinfo[i].AM[int((jstart+jend+1)/2)]-0.05),
+                 fontsize = 6)
+    plt.xticks(rotation=20)
+    plt.tight_layout()
+    pp.savefig()
+    return
 
 class PlanInfo(object):
 
@@ -215,11 +288,14 @@ class PlanInfo(object):
 
         """
         verbose = False
-        schedule_order = False
+        scheduler_order = False
+        plot_construction = True
 
         plantype = 'Priority'  # define plan type
         plan = np.full(timeinfo.nt, -1)
 
+        if plot_construction:  # initialize plan build plot figure and pdf file
+            pp = _init_planbuildplot(timeinfo=timeinfo)
 
         dt = timeinfo.dt
         nt = timeinfo.nt
@@ -412,6 +488,10 @@ class PlanInfo(object):
                 # ii_obs = np.where(obs.obs_id == obs.prog_ref[iimax])[0][:]  # indices of obs. in same program
                 obs.obs_comp[iimax] = obs.obs_comp[iimax] + dt * ntmin / obs.tot_time[iimax]  # update cplt fraction
 
+                if plot_construction:  # add scheduled target to plan build plot
+                    _plotam_planbuildplot(pp=pp, timeinfo=timeinfo, targetinfo=targetinfo, i=iimax, jstart=jstart,
+                                   jend=jend)
+
                 if obs.obs_comp[iimax]>=1.:  # completed observation
                     targetinfo[iimax].weight = targetinfo[iimax].weight * -1  # set all target weights to neg.
                 else:  # incomplete observation
@@ -434,15 +514,18 @@ class PlanInfo(object):
                     print('New obs time: ', obs.obs_time[iimax])
                     print('New comp time: ', obs.obs_comp[iimax])
 
-                if schedule_order:
+                if scheduler_order:
                     print('\tScheduled: ',iimax,targetinfo[iimax].name,'from',timeinfo.utc[jstart].iso,'to',timeinfo.utc[jend].iso)
                     print(targetinfo[iimax].weight)
 
+
             ii = np.where(plan == -1)[0][:]  # get indices of remaining time slots
+
+        if plot_construction:  # save and clear plan build plot
+            _close_planbuildplot(pp=pp)
 
         # finalize plan and retrieve details
         plan = _optimize_plan(plan, targetinfo)  # Try rearranging plan
-
         obslist, i_start, i_end = _plan_details(plan, targetinfo)  # plan details
         hours = (i_end-i_start+1)*dt  # lengths of scheduled observations
         ii = np.where(plan >= 0)[0][:] # scheduled time slots
@@ -454,4 +537,4 @@ class PlanInfo(object):
                 cplt[i] = True
 
         return cls(plantype=plantype, plan=plan, obslist=obslist, i_start=i_start, i_end=i_end, hours=hours,
-                   cplt=cplt, used_time=used_time, night_length=night_length),obs
+                   cplt=cplt, used_time=used_time, night_length=night_length), obs
