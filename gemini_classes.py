@@ -143,6 +143,7 @@ class TimeInfo(object):
         night_length : 'astropy.units.quantity.Quantity'
             hours between twilights
         """
+
         timer = False
         if timer:
             import time as t
