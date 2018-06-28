@@ -1,7 +1,6 @@
 import argparse
 import random
 import re
-import os
 import numpy as np
 import textwrap
 import astropy.units as u
@@ -10,162 +9,25 @@ from astroplan import (download_IERS_A, Observer)
 from astropy import (coordinates, time)
 
 # gqpt packages
-import condgen
-import gcirc
-import sb
-from conversions import actual_conditions
-from calc_night import calc_night
-from calc_weight import calc_weight
-from gemini_classes import Gobservations, Gcatfile
+import logger
+from sb import sb
+from gcirc import gcirc
 from amplot import amplot
-from printplan import plantable
+from condgen import condgen
+from calc_weight import calc_weight
+from printplan import printPlanTable
 from gemini_schedulers import PlanInfo
+from conversions import actual_conditions
+from gemini_otcat import Gobservations, Gcatfile
+from gemini_classes import TimeInfo,SunInfo,MoonInfo,TargetInfo
 
 
-def _init_logfile(filename, catalogfile, site, start, n_nights, dst):
-    aprint = '\n\t{0:<15s}{1}'  # print two strings
-    bprint = '\n\t{0:<15s}{1:<.4f}'  # print string and number
-    with open(filename, 'w') as log:
-        log.write('\n Program: gqpt.py')
-        log.write('\n Run from directory: ' + os.getcwd())
-        log.write('\n Observation information retrieved from '+catalogfile)
-        log.write('\n\n Dates: '+str(start)[0:10]+' to '+str(start+(n_nights-1)*u.d)[0:10])
-        log.write('\n Number of nights: '+str(n_nights))
-        log.write('\n Daylight savings time: ' + str(dst))
-        log.write('\n\n Observing site: ')
-        log.write(aprint.format('Site: ', site.name))
-        log.write(bprint.format('Height: ', site.location.height))
-        log.write(bprint.format('Longitude: ', coordinates.Angle(site.location.lon)))
-        log.write(bprint.format('Latitude: ', coordinates.Angle(site.location.lat)))
-        log.close()
-    return
 
-def _log_planstats(filename, obs, plan, timeinfo, suninfo, mooninfo, targetinfo, acond):
-
-    with open(filename, 'a') as log:
-        log.write('\n\n -----------------------------------------------------------')
-        log.write('\n\n Night schedule:')
-        log.write('\n\tSky conditions (iq,cc,wv): {0} , {1} , {2}'.format(acond[0], acond[1], acond[3]))
-        [log.write('\n'+line) for line in timeinfo.table()]
-        [log.write('\n' + line) for line in suninfo.table()]
-        [log.write('\n' + line) for line in mooninfo.table()]
-        [log.write('\n' + line) for line in plan.table()]
-        [log.write('\n' + line) for line in plantable(plan=plan, obs=obs, timeinfo=timeinfo, targetinfo=targetinfo)]
-        log.close()
-
-    return
-
-def _log_progstats(filename, obs, semesterinfo, description):
-    """
-    Computes and appends observations statistics to a file.
-
-    Example
-    -------
-
-    >>> _log_progstat(filename='myfile.log', obs=Gobservations(catinfo=Gcatfile(otfile),i_obs=i_obs))
-
-     Program             Completion     Total time
-     -------             ----------     ----------
-     GS-2018A-A-1        100%           1.02 h
-     GS-2018A-B-1        2.8%           2.68 h
-     GS-2018A-B-2        0.03%          6.68 h
-     GS-2018A-C-1        1.02%          12.7 h
-     GS-2018A-C-2        100%           0.4 h
-     GS-2018A-C-3        30.32%         14.84 h
-     GS-2018A-C-4        43.74%         2.51 h
-     GS-2018A-C-5        44.96%         0.63 h
-     GS-2018A-C-6        0.96%          21.91 h
-     GS-2018A-C-7        83.34%         1.82 h
-     GS-2018A-C-8        93.1%          12.03 h
-     GS-2018A-C-9        65.69%         14.61 h
-     GS-2018A-C-10       9.68%          4.14 h
-     GS-2018A-C-11       51.86%         9.17 h
-
-     Number of programs: 28
-     Total program time: 341.63 h
-     Total time completion: 10.35%
-
-     Completed: 2
-     Observed time: 1.43 h
-
-     Partially completed: 12
-     Observed time: 33.77 h
-     Remaining time: 69.95 h
-
-     Not started: 14
-     Remaining time: 236.48 h
-
-     Parameter
-     ---------
-     filename : string
-         log file name including extension type (eg. 'logfile2018-01-01.log')
-
-     obs : 'gemini_classes.Gobservations'
-         Observation information object
-    """
-
-    progname, rr, ri, rc = np.unique(obs.prog_ref, return_index=True, return_inverse=True, return_counts=True)
-    prog_comp_time = 0. * u.h  # total time of completed programs
-    prog_start_time = 0. * u.h  # total time of partially completed programs
-    obs_start_time = 0. *u.h  # total observed time for partially completed program
-    prog_unstart_time = 0. * u.h  # total time of unstarted programs
-    num_prog_comp = 0  # number of completed programs
-    num_prog_started = 0  # number of partially completed programs
-    num_prog_unstarted = 0  # number of not yet started programs
-
-    aprint = '\n {0:<20}{1:<15}{2:<15}'
-    with open(filename, 'a') as log:
-
-        log.write('\n\n -----------------------------------------------------------')
-        log.write('\n\n ' + description)
-        log.write('\n\n'+aprint.format('Program', 'Completion', 'Total time'))
-        log.write(aprint.format('-------', '----------', '----------'))
-        for i in range(len(rr)):
-            jj = np.where(obs.obs_comp[rr[i]:rr[i]+rc[i]]>0.)[0][:]
-            if len(jj) > 0: # started or completed obs in program
-                prog_time = sum(obs.tot_time[rr[i]:rr[i]+rc[i]])
-                sum_obs_time = sum(obs.obs_time[rr[i]:rr[i]+rc[i]])
-                frac_comp = sum_obs_time/prog_time
-                if frac_comp >=1.:
-                    perc_comp = '100%'
-                    prog_comp_time = prog_comp_time + prog_time
-                    num_prog_comp = num_prog_comp + 1
-                else:
-                    perc_comp = str((100*frac_comp).round(2))+'%'
-                    obs_start_time = obs_start_time + sum_obs_time
-                    prog_start_time = prog_start_time + prog_time
-                    num_prog_started = num_prog_started + 1
-                log.write(aprint.format(progname[i], perc_comp, str(prog_time.round(2))))
-            else:
-                prog_unstart_time = prog_unstart_time + sum(obs.tot_time[rr[i]:rr[i] + rc[i]])
-                num_prog_unstarted = num_prog_unstarted + 1
-
-        tot_prog_time = sum(obs.tot_time)
-        tot_obs_time = sum(obs.obs_time)
-        log.write('\n\n Number of programs: ' + str(len(progname)))
-        log.write('\n Total program time: ' + str(tot_prog_time.round(2)))
-        log.write('\n Total time completion: ' + str((100 * tot_obs_time / tot_prog_time).round(2)) + '%')
-
-        log.write('\n\n Total observable time: '+str(semesterinfo['night_time'].round(2)))
-        log.write('\n Total scheduled time: ' + str(semesterinfo['used_time'].round(2)))
-
-        log.write('\n\n Completed: ' + str(num_prog_comp))
-        log.write('\n Observed time: '+str(prog_comp_time.round(2)))
-
-        log.write('\n\n Partially completed: ' + str(num_prog_started))
-        log.write('\n Observed time: ' + str(obs_start_time.round(2)))
-        log.write('\n Remaining time: ' + str((prog_start_time-obs_start_time).round(2)))
-
-        log.write('\n\n Not started: ' + str(num_prog_unstarted))
-        log.write('\n Remaining time: ' + str(prog_unstart_time.round(2)))
-
-        log.close()
-    return
 
 seed = random.seed(1000)
 
 
-#   =============================================== Read and command line inputs =============================================================
+#   ======================================= Read and command line inputs ===============================================
 
 verbose = False
 
@@ -253,14 +115,14 @@ update = parse.update
 if update:  # download up to date International Earth Rotation and Reference Systems data
     download_IERS_A()
 
-# ========================================= Input conditions =====================================================
+# ========================================= Handle input conditions ====================================================
 
 # Assign condition distribution generator function if selected
 conddist = False
 if distribution is not None:
     conddist = True
     if distribution=='gaussian' or distribution=='g':
-        cond_func = condgen.condgen.gauss
+        cond_func = condgen.gauss
     else:
         print('\n\''+str(distribution)+'\' is not an accepted distribution type.'
                                        ' Refer to program help using \'-h\' and try again.')
@@ -280,8 +142,8 @@ else:
     else:
         wv = parse.wv[0:2] + '%'
 
-# ========================== Create astroplan.Observer object for observatory site ====================================
-# Set site name for Cerro Pachon or Mauna Kea and initialize Observer object
+# =========================================== Handle input site name ===================================================
+# Set site name for Cerro Pachon or Mauna Kea and initialize astroplan.Observer object
 
 # Check observatory input. return timezone, utc-local time difference
 if np.logical_or(site_name=='gemini_south',site_name=='CP'):
@@ -302,13 +164,13 @@ else:
 site = Observer.at_site(site_name) #create Observer object for observatory site
 # can add timezone=timezone_name later if desired (useful if pytz objects are ever used)
 
-print('')
-print(aprint.format('Site: ',site.name))
+print('\n'+aprint.format('Site: ',site.name))
 print(bprint.format('Height: ',site.location.height))
 print(bprint.format('Longitude: ',coordinates.Angle(site.location.lon)))
 print(bprint.format('Latitude: ',coordinates.Angle(site.location.lat)))
 
-# ================= Read input start/end dates. Create time object for current local and utc time ===================
+# ======================================== Handle input start/end dates  ===============================================
+# Set start and end dates. Create time object for current local and utc time
 
 dform = re.compile('\d{4}-\d{2}-\d{2}') #yyyy-mm-dd format
 
@@ -337,47 +199,64 @@ else:
         print('\nInput error: \"'+enddate+'\" not a valid end date.  Must be in the form \'yyyy-mm-dd\'')
         exit()
 
-print('')
-print(aprint.format('Schedule start (local): ',local_start.iso))
-print(aprint.format('Schedule start (UTC): ',(local_start-utc_to_local).iso))
-print(bprint.format('Julian date (UTC): ',(local_start-utc_to_local).jd))
-print(bprint.format('Julian year (UTC): ',(local_start-utc_to_local).jyear))
+utc_start = local_start-utc_to_local
+utc_night_starts = utc_start + count_day
+
+print('\n'+aprint.format('Schedule start (local): ',local_start.iso))
+print(aprint.format('Schedule start (UTC): ',utc_start.iso))
+print(bprint.format('Julian date (UTC): ',utc_start.jd))
+print(bprint.format('Julian year (UTC): ',utc_start.jyear))
 print(aprint.format('Number of nights: ', len(count_day)))
 
-# ====================== Read catalog and select observations for queue ========================
-otcat = Gcatfile(otfile)  # object containing catalog data under column headers.
+# ========================================= Handle input catalog file ==================================================
+# Read appropriate file into GObservation class and select observations for queue
 
-# Select observations from catalog to queue
-i_obs = np.where(np.logical_and(np.logical_or(otcat.obs_status=='Ready',otcat.obs_status=='Ongoing'),
-    np.logical_or(otcat.obs_class=='Science',
-    np.logical_and(np.logical_or(otcat.inst=='GMOS',otcat.inst=='bHROS'),
-    np.logical_or(otcat.obs_class=='Nighttime Partner Calibration',
-                  otcat.obs_class=='Nighttime Program Calibration')))))[0][:] #get indeces of observation to queue
+otcat = Gcatfile(otfile)  # class containing catalog data under column header attribute name as strings
+obs = Gobservations(otcat, epoch=local_start) # class containing sorted and converted catalog data (as in IDL version)
 
-print('\n\t'+str(len(i_obs))+' observations selected for queue...')
+print('\n\t'+str(len(obs.obs_id))+' observations selected for queue...')
 
-# Interpret and sort catalog data into appropriate columns(as done in Bryan Miller's IDL version)
-obs = Gobservations(catinfo=otcat,i_obs=i_obs) 
+# ======================================== Initialize statistics logfile ===============================================
+semesterstats = {'night_time': 0. * u.h, 'used_time': 0. * u.h}
 
-# ====================== Initialize statistics logfile ========================
-statfilename = 'logfile'+current_local.isot+'.log'
-# statfilename = 'testlogfile.log'
+statfilename = 'logfile'+current_local.isot[:-5]+'.log'
+statfilename = 'testlogfile.log'
 
-# statfilename = 'logfile.log'
-_init_logfile(filename=statfilename, catalogfile=otfile, site=site, start=local_start, n_nights=len(count_day),
-              dst=dst)
+logger.initLogFile(filename=statfilename, catalogfile=otfile, site=site,
+                   start=local_start, n_nights=len(count_day), dst=dst)
 
-semesterinfo = {'night_time':0.*u.h,'used_time':0.*u.h}
-_log_progstats(filename=statfilename, obs=obs, semesterinfo=semesterinfo, description='Initial completion status...')
+logger.logProgStats(filename=statfilename, obs=obs, semesterinfo=semesterstats,
+                    description='Initial completion status...')
 
 print('\n\tOuput file: '+statfilename)
-# =================================== Begin Queueing ==============================================
 
-for i_day in count_day: #cycle through observation days
+# =============================== Compute times, sun data, and moon data for all dates =================================
 
-    night_start = local_start + i_day # time object for 18:00 local on current night
-    night_start_utc = night_start - utc_to_local # time object for 18:00 UTC on current night
-    date = str(night_start)[0:10]  # date as string
+ttimer = True
+if ttimer:
+    import time as t
+    timer = t.time()
+dt = 0.1
+print()
+timeinfo = Parallel(n_jobs=10)(delayed(TimeInfo)(site=site, starttime=utc_night_start, dt=dt,
+                                                     utc_to_local=utc_to_local) for utc_night_start in utc_night_starts)
+if ttimer: print('\n\tTime to gather time data: ', t.time() - timer)
+timer = t.time()
+
+suninfo = Parallel(n_jobs=10)(delayed(SunInfo)(site=site, utc_times=times.utc) for times in timeinfo)
+if ttimer: print('\n\tTime to gather sun data: ', t.time() - timer)
+timer = t.time()
+
+mooninfo = Parallel(n_jobs=10)(delayed(MoonInfo)(site=site, utc_times=times.utc) for times in timeinfo)
+if ttimer: print('\n\tTime to gather moon data: ', t.time() - timer)
+
+# ============================================== Begin Queueing ========================================================
+
+for i in range(len(timeinfo)):  # cycle through observation days
+
+    # night_start = local_start + i_day # time object for 18:00 local on current night
+    # night_start_utc = night_start - utc_to_local # time object for 18:00 UTC on current night
+    date = str(timeinfo[i].utc[0].iso)[0:10]  # date as string
 
     print('\n\n\t_______________________ Night of '+date+' _______________________')
 
@@ -391,43 +270,51 @@ for i_day in count_day: #cycle through observation days
     print('\n\tSky conditions (iq,cc,wv): {0} , {1} , {2}'.format(acond[0], acond[1], acond[3]))
 
     # calculate time dependent parameters for observing window
-    timeinfo, suninfo, mooninfo, targetinfo = calc_night(obs=obs, site=site, starttime=night_start_utc,
-                                                         utc_to_local=utc_to_local)
+    # timeinfo, suninfo, mooninfo, targetinfo = calc_night(obs=obs, site=site, starttime=night_start_utc,
+    #                                                      utc_to_local=utc_to_local)
 
-    ttimer = False
     if ttimer:
-        import time as t
+        timer = t.time()
+
+    targetinfo = Parallel(n_jobs=10)(delayed(TargetInfo)(ra=obs.ra[j], dec=obs.dec[j], name=obs.obs_id[j],
+                                     site=site, utc_times=timeinfo[i].utc) for j in range(len(obs.obs_id)))
+    if ttimer:
+        print('\n\tTime to gather target data: ', t.time() - timer)
         timer = t.time()
 
     # compute mdist and visible sky brightness using parallel processes.
-    mdists = Parallel(n_jobs=10)(delayed(gcirc.gcirc)(mooninfo.ra, mooninfo.dec, target.ra,
+    mdists = Parallel(n_jobs=10)(delayed(gcirc)(mooninfo[i].ra, mooninfo[i].dec, target.ra,
                                    target.dec) for target in targetinfo)
-    for i in range(len(mdists)):
-        targetinfo[i].mdist=mdists[i]
-    if ttimer: print('\n\tTime to calc mdist: ', t.time() - timer)
+    for k in range(len(mdists)):
+        targetinfo[k].mdist=mdists[k]
+    if ttimer:
+        print('\n\tTime to calc mdist: ', t.time() - timer)
+        timer = t.time()
 
-    vsbs = Parallel(n_jobs=10)(delayed(sb.sb)(mpa=mooninfo.phase, mdist=target.mdist, mZD=mooninfo.ZD, ZD=target.ZD, sZD=suninfo.ZD,
-                           cc=acond[1]) for target in targetinfo)
-    for i in range(len(vsbs)):
-        targetinfo[i].vsb = vsbs[i]
-    if ttimer: print('\n\tTime to calc vsb: ', t.time() - timer)
+    vsbs = Parallel(n_jobs=10)(delayed(sb)(mpa=mooninfo[i].phase, mdist=target.mdist, mZD=mooninfo[i].ZD,
+                                           ZD=target.ZD, sZD=suninfo[i].ZD, cc=acond[1]) for target in targetinfo)
+    for k in range(len(vsbs)):
+        targetinfo[k].vsb = vsbs[k]
+    if ttimer:
+        print('\n\tTime to calc vsb: ', t.time() - timer)
+        timer = t.time()
 
     # calculate weights
-    weightinfo = calc_weight(site=site, obs=obs, timeinfo=timeinfo, targetinfo=targetinfo, acond=acond)
+    weightinfo = calc_weight(site=site, obs=obs, timeinfo=timeinfo[i], targetinfo=targetinfo, acond=acond)
 
     # generate PlanInfo plan object and update Gobservation object
-    plan, obs = PlanInfo.priority(obs=obs, timeinfo=timeinfo, targetinfo=targetinfo)
+    plan, obs = PlanInfo.priority(obs=obs, timeinfo=timeinfo[i], targetinfo=targetinfo)
 
     # print plan
-    [print(line) for line in plantable(plan=plan, obs=obs, timeinfo=timeinfo, targetinfo=targetinfo)]
+    [print(line) for line in printPlanTable(plan=plan, obs=obs, timeinfo=timeinfo[i], targetinfo=targetinfo)]
 
-    _log_planstats(filename=statfilename, obs=obs, plan=plan, timeinfo=timeinfo, suninfo=suninfo,
-                    mooninfo=mooninfo, targetinfo=targetinfo, acond=acond)
-    semesterinfo['night_time'] = semesterinfo['night_time'] + plan.night_length
-    semesterinfo['used_time'] = semesterinfo['used_time'] + plan.used_time
+    logger.logPlanStats(filename=statfilename, obs=obs, plan=plan, timeinfo=timeinfo[i], suninfo=suninfo[i],
+                    mooninfo=mooninfo[i], targetinfo=targetinfo, acond=acond)
+    semesterstats['night_time'] = semesterstats['night_time'] + plan.night_length
+    semesterstats['used_time'] = semesterstats['used_time'] + plan.used_time
 
     # airmass plot to png file
-    amplot(plan=plan, timeinfo=timeinfo, mooninfo=mooninfo, targetinfo=targetinfo)
+    amplot(plan=plan, timeinfo=timeinfo[i], mooninfo=mooninfo[i], targetinfo=targetinfo)
 
-_log_progstats(filename=statfilename, obs=obs, semesterinfo=semesterinfo, description='Schedule results...')
+logger.logProgStats(filename=statfilename, obs=obs, semesterinfo=semesterstats, description='Schedule results...')
 exit()

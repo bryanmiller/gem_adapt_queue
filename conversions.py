@@ -1,7 +1,7 @@
 import numpy as np
 import re
 
-def conditions( iq, cc, bg, wv):
+def convertConditions( iq, cc, bg, wv):
     
     """
     Convert weather condition constraints found in OT catalog
@@ -187,8 +187,10 @@ def actual_conditions( iq, cc, bg, wv):
         wv = 1.
     else:
         wv = float(re.findall(r'[\d\.\d]+',wv)[0])/100
-        if wv <= 0.5:
+        if wv <= 0.2:
             wv = 0.2
+        elif 0.2 < wv <= 0.5:
+            wv = 0.5
         elif 0.5 < wv <= 0.7:
             wv = 0.7
         elif 0.5 < wv <= 0.85:
@@ -199,29 +201,29 @@ def actual_conditions( iq, cc, bg, wv):
 
 
 def _test_actual_conditions():
-    print('\nRunning _test_actual_conditions...')
+    print('\n Running _test_actual_conditions...')
     iq, cc, bg, wv = actual_conditions('5%', '5%', '5%', '5%')
-    print('Test input/ouput: '+str([iq, cc, bg, wv]) + ' == [0.2, 0.2, 0.2, 0.5]')
-    assert([iq, cc, bg, wv] == [0.2, 0.2, 0.2, 0.5])
+    print(' Test input/ouput: '+str([iq, cc, bg, wv]) + ' == [0.2, 0.2, 0.2, 0.2]')
+    assert([iq, cc, bg, wv] == [0.2, 0.2, 0.2, 0.2])
 
     iq, cc, bg, wv = actual_conditions('59%', '59%', '59%', '59%')
-    print('Test input/ouput: '+str([iq, cc, bg, wv]) + '  == [0.85, 0.7, 0.7, 0.7]')
-    assert ([iq, cc, bg, wv] == [0.85, 0.7, 0.7, 0.7])
+    print(' Test input/ouput: '+str([iq, cc, bg, wv]) + '  == [0.7, 0.7, 0.7, 0.7]')
+    assert ([iq, cc, bg, wv] == [0.7, 0.7, 0.7, 0.7])
 
 def _test_conditions():
-    print('\nRunning _test_conditions...')
+    print('\n Running _test_conditions...')
     testiq = np.array(['10%', '20%', '50%', '70%', '80%', '85%', 'Any', 'null'])
     testcc = np.array(['10%', '20%', '50%', '70%', '80%', '85%', 'Any', 'null'])
     testbg = np.array(['10%', '20%', '50%', '70%', '80%', '85%', 'Any', 'null'])
     testwv = np.array(['10%', '20%', '50%', '70%', '80%', '85%', 'Any', 'null'])
 
-    print('Test input: ')
+    print(' Test input: ')
     print('\tiq: ',testiq)
     print('\tcc: ', testcc)
     print('\tbg: ', testbg)
     print('\twv: ', testwv)
-    iq, cc, bg, wv = conditions( testiq, testcc, testbg, testwv)
-    print('Test ouput: ')
+    iq, cc, bg, wv = convertConditions( testiq, testcc, testbg, testwv)
+    print(' Test ouput: ')
     print('\tiq: ',iq)
     print('\tcc: ', cc)
     print('\tbg: ', bg)

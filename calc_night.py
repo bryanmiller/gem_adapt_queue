@@ -3,18 +3,6 @@ from joblib import Parallel, delayed
 from astropy import (coordinates)
 from gemini_classes import TimeInfo,SunInfo,MoonInfo,TargetInfo
 
-# import time as t
-# starttime = t.time() # runtime clock
-# print('Runtime: ',t.time()-starttime) # runtime clock
-
-def _init_target(ra, dec, id, starttime, site, utc_times):
-    #coord_j2000 = coordinates.SkyCoord(ra, dec, frame='icrs', unit=(u.deg, u.deg))
-    #current_epoch = coord_j2000.transform_to(
-    #    coordinates.FK5(equinox='J' + str(starttime.jyear)))  # coordinate for current epoch
-    target = TargetInfo(site=site, utc_times=utc_times, name=id, ra=current_epoch.ra,
-                        dec=current_epoch.dec)  # initialize targetinfo class
-    return target
-
 @u.quantity_input(utc_to_local=u.h)
 def calc_night(obs,site,starttime,endtime=None,dt=0.1,utc_to_local=0.*u.h):
     
@@ -76,14 +64,18 @@ def calc_night(obs,site,starttime,endtime=None,dt=0.1,utc_to_local=0.*u.h):
     if timer:
         import time as t
         timerstart = t.time()  # runtime clock
-    targetinfo = Parallel(n_jobs=25)(delayed(TargetInfo)(ra=obs.ra[i], dec=obs.dec[i], name=obs.obs_id[i],
-                                     site=site, utc_times=timeinfo.utc) for i in range(len(obs.obs_id)))
+    targetinfo = []
+    for i in range(len(obs.obs_id)):
+        targetinfo.append(TargetInfo(ra=obs.ra[i], dec=obs.dec[i], name=obs.obs_id[i],
+                                     site=site, utc_times=timeinfo.utc))
+    # targetinfo = Parallel(n_jobs=25)(delayed(TargetInfo)(ra=obs.ra[i], dec=obs.dec[i], name=obs.obs_id[i],
+    #                                  site=site, utc_times=timeinfo.utc) for i in range(len(obs.obs_id)))
     if timer: print('\n\tInitialize Targets: ', t.time() - timerstart)  # runtime clock
 
     # print night details to terminal
-    [print(line) for line in timeinfo.table()]
-    [print(line) for line in suninfo.table()]
-    [print(line) for line in mooninfo.table()]
+    # [print(line) for line in timeinfo.table()]
+    # [print(line) for line in suninfo.table()]
+    # [print(line) for line in mooninfo.table()]
 
     return timeinfo, suninfo, mooninfo, targetinfo
 
