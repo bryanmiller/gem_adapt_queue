@@ -3,6 +3,9 @@ import re
 import random
 import numpy as np
 import scipy.stats as st
+import astropy.units as u
+from astroplan import Observer
+import matplotlib.units as units
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
@@ -101,14 +104,14 @@ class wind(object):
             wvel = 0. * u.km/u.h
         self.vel = wvel
 
-def test(pp,function):
+def test_condgen(pp, function):
 
     """
     Create plots of conditions generated
     from a given distribution. 
     """
 
-    n_nums = 500
+    n_nums = 300
     x = np.arange(n_nums)
 
     iqs = []
@@ -118,10 +121,10 @@ def test(pp,function):
     bins = np.linspace(0,1,50)
     randbins = np.linspace(-3,3,50)
     for i in range(n_nums):
-        iq,cc,wv = function()
-        iqs.append(int(re.findall('\d+',iq)[0])/100)
-        ccs.append(int(re.findall('\d+',cc)[0])/100)
-        wvs.append(int(re.findall('\d+',wv)[0])/100)
+        cond = function()
+        iqs.append(int(re.findall('\d+',cond.iq)[0])/100)
+        ccs.append(int(re.findall('\d+',cond.cc)[0])/100)
+        wvs.append(int(re.findall('\d+',cond.wv)[0])/100)
         rands.append(random.gauss(0,1))
 
     fig = plt.figure()
@@ -168,15 +171,64 @@ def test(pp,function):
     fig.tight_layout()
     pp.savefig()
     plt.clf()
+
+    return
+
+def test_wind(pp):
+
+    """
+    Create plots of conditions generated
+    from a given distribution.
+    """
+    site = Observer.at_site('gemini_south')
+
+    n_nums = 500
+    x = np.arange(n_nums)
+
+    dir = []
+    vel = []
+
+    for i in x:
+        w = wind(site=site)
+        dir.append(w.dir)
+        vel.append(w.vel)
+
+    # for i in x:
+    #     print(x[i])
+    # for i in x:
+    #     print(dir[i])
+    # for i in x:
+    #     print(vel[i])
+
+    fig = plt.figure()
+    fig.suptitle('Test: ' + str(wind), fontsize=12)
+
+    ax1 = plt.subplot(211)
+    ax1.set_title('Direction')
+    ax1.set_ylim(220,380)
+    for i in x:
+        ax1.scatter(x[i], dir[i], marker='.')
+
+    ax2 = plt.subplot(212)
+    ax2.set_title('Velocity')
+    for i in x:
+        ax2.scatter(x[i], vel[i], marker='.')
+
+    fig.tight_layout()
+    pp.savefig()
+    plt.clf()
+
     return
 
 if __name__=='__main__':
-    
-    # save plots to file
-    pp = PdfPages('condgen_test_plots.pdf')
 
-    test(pp=pp,function=gauss_cond)
+    filename = 'condgen_test_plots.pdf'
+    # save plots to file
+    pp = PdfPages(filename)
+
+    test_condgen(pp=pp, function=condgen.gauss)
+    # test_wind(pp=pp)
 
     pp.close()
 
-
+    print(' Test successful. Output: ' + str(filename))

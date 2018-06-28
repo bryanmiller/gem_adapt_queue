@@ -1,29 +1,53 @@
-import re
 import numpy as np
 import astropy.units as u
-from conversions import conditions
 from calc_ZDHA import calc_ZDHA
-import astropy.time as time
-from astropy.coordinates import (SkyCoord, FK5, EarthLocation, get_sun, get_moon)
-from astroplan import (Observer)
+from astropy.coordinates import (EarthLocation, get_sun, get_moon)
+from astroplan import Observer
+from astropy.time import Time
 
-def hms_to_hr(timestring): # convert 'HH:MM:SS' string to hours
-    (h, m, s) = timestring.split(':')
-    return (np.int(h) + np.int(m)/60 + np.int(s)/3600)
+def airmass(ZD):
+    """
+    Calculate airmasses
 
-def airmass(ZD): # calculate airmasses
+    Parameter
+    ---------
+    ZD : array of 'astropy.units.Quantity'
+        zenith distance angle
+
+    Return
+    ---------
+    AM : array of floats
+        airmass
+    """
     AM = np.full(len(ZD),20.)
     ii = np.where(ZD < 87.*u.deg)[0][:]
     sec_z = 1. / np.cos(ZD[ii])
     AM[ii] = sec_z - 0.0018167 * ( sec_z - 1 ) - 0.002875 * ( sec_z - 1 )**2 - 0.0008083 * ( sec_z - 1 )**3 #compute moon AMs
     return AM
 
-def sun_horizon(site): # calculate angle of sun at sunset for observer site
+def sun_horizon(site):
+    """
+    Calculate angle between sun and horizon at sunset at a location.
+
+    Parameter
+    ---------
+    site : 'astroplan.Observer'
+        class with observer's longitude, latitude, elevation.
+
+    Return
+    --------
+    'astropy.units.Quantity'
+        degree angle of sun at sunset
+    """
     sun_horiz = -.83 * u.degree
     equat_radius = 6378137. * u.m
     return sun_horiz - np.sqrt(2. * site.location.height / equat_radius) * (180. / np.pi) * u.degree
 
 def _checkinput_site(site,latitude,longitude,elevation):
+    """
+    Check that observer location is 'astroplan.Observer' class or
+    initialize and return 'astroplan.Observer' if longitude, latitude, elevation provided.
+    """
     if site is None and (latitude is not None and
                          longitude is not None):
         return Observer(location=EarthLocation.from_geodetic(longitude, latitude,
@@ -47,10 +71,10 @@ def _checkinput_lst(variable,varname):
                         'astropy.coordinates.angles.Longitude.')
 
 def _checkinput_time(variable,varname):
-    if isinstance(variable, time.core.Time):
+    if isinstance(variable, Time):
         return variable
     elif isinstance(variable, str):
-        return time.Time(variable)
+        return Time(variable)
     else:
         raise TypeError('Input time \''+varname+'\' must be specified with either'
                         '(1) an instance of astropy.time.core.Time'
@@ -63,9 +87,6 @@ def _checkinput_coord(ra,dec):
         raise TypeError('Coordinates must be specified as...'
                   '\nra: an instance of astropy.coordinates.angles.Longitude'
                   '\ndec: an instance of astropy.coordinates.angles.Latitude.')
-
-
-
 
 class TimeInfo(object):
 
@@ -91,13 +112,13 @@ class TimeInfo(object):
         dt (optional): float
             size of time intervals in hours (Default is 0.1).
 
-        latitude (optional) : float, str, astropy.units.Quantity
+        latitude (optional) : float, str, 'astropy.units.Quantity'
             The latitude of the observing location (if site not provided).
 
-        longitude (optional) : float, str, astropy.units.Quantity
+        longitude (optional) : float, str, 'astropy.units.Quantity'
             The longitude of the observing location (if site not provided).
 
-        elevation (optional) : astropy.units.Quantity (default = 0 meters)
+        elevation (optional) : 'astropy.units.Quantity' (default = 0 meters)
             The elevation of the observing location (if site not provided).
 
 
@@ -170,9 +191,6 @@ class TimeInfo(object):
 
         # hours between start and end times
         night_length = (end_time - start_time) * 24. / u.d  # get number of hours between twilights
-
-        if dt == None:
-            dt = 0.1  # 1/10 hr default step size
         nt = int(round(float(night_length) / dt, 1)) + 1  # number of time intervals between twilights
         dt = dt * u.h  # apply units to dt
         stepnum = np.arange(0, nt)  # assign integer to time intervals
@@ -238,9 +256,11 @@ class TimeInfo(object):
 
 
     def table(self,showall=False):
+
         """
         Table representation of gemini_classes.TimeInfo object
         """
+
         table = []
 
         sattr = '\t\t{0:<25s}{1}'  # print string and string
@@ -342,10 +362,11 @@ class SunInfo(object):
         _checkinput_time(variable=utc_times,varname='utc_times')
 
         # sunset/sunrise times
-        sun_horiz = sun_horizon(site)  # compute sun set/rise angle from zenith
-        self.set = site.sun_set_time(utc_times[0], which='nearest', horizon=sun_horiz)
-        self.rise = site.sun_rise_time(utc_times[0], which='next', horizon=sun_horiz)
-
+        # sun_horiz = sun_horizon(site)  # compute sun set/rise angle from zenith
+        # self.set = site.sun_set_time(utc_times[0], which='nearest', horizon=sun_horiz)
+        # self.rise = site.sun_rise_time(utc_times[0], which='next', horizon=sun_horiz)
+        self.set = None
+        self.rise = None
         # Sun info (assuming sun coordinates constant throughout night)
         solar_midnight = site.midnight(utc_times[0], which='nearest')  # get local midnight in utc time
         sun_pos = get_sun(solar_midnight)
@@ -373,9 +394,11 @@ class SunInfo(object):
         return "<{}: {}>".format(class_name, ",\n    ".join(attributes_strings))
 
     def table(self,showall=False):
+
         """
         Table representation of gemini_classes.TimeInfo object
         """
+
         sattr = '\t\t{0:<25s}{1}'  # print string and string
         fattr = '\t\t{0:<25s}{1:.2f}'  # print string and float
         table = []
@@ -487,43 +510,67 @@ class MoonInfo(object):
 
         self.site = _checkinput_site(site=site, latitude=latitude, longitude=longitude, elevation=elevation)
         _checkinput_time(variable=utc_times, varname='utc_times')
+        if timer:
+            print('\n\tCheck times: ', t.time() - timerstart)  # runtime clock
+            timerstart = t.time()
 
-        sun_horiz = sun_horizon(site)  # compute sun set/rise angle from zenith
-        if timer: print('\n\tInitialize MoonInfo horiz: ', t.time() - timerstart)  # runtime clock
+        # sun_horiz = sun_horizon(site)  # compute sun set/rise angle from zenith
+        # if timer:
+        #     print('\n\tInitialize MoonInfo horiz: ', t.time() - timerstart)  # runtime clock
+        #     timerstart = t.time()
+
+        # self.set = site.moon_set_time(utc_times[0], which='next', horizon=sun_horiz)
+        # if timer:
+        #     print('\tInitialize MoonInfo set: ', t.time() - timerstart)  # runtime clock
+        #     timerstart = t.time()
+        #
+        # self.rise = site.moon_rise_time(utc_times[0], which='nearest', horizon=sun_horiz)
+        # if timer:
+        #     print('\tInitialize MoonInfo rise: ', t.time() - timerstart)  # runtime clock
+        #     timerstart = t.time()
+        self.set = None
+        self.rise = None
 
         solar_midnight = site.midnight(utc_times[0], which='nearest')  # get local midnight in utc time
-        if timer: print('\tInitialize MoonInfo midnight: ', t.time() - timerstart)  # runtime clock
-
-        self.set = site.moon_set_time(utc_times[0], which='next', horizon=sun_horiz)
-        if timer: print('\tInitialize MoonInfo set: ', t.time() - timerstart)  # runtime clock
-
-        self.rise = site.moon_rise_time(utc_times[0], which='nearest', horizon=sun_horiz)
-        if timer: print('\tInitialize MoonInfo rise: ', t.time() - timerstart)  # runtime clock
+        if timer:
+            print('\tInitialize MoonInfo midnight: ', t.time() - timerstart)  # runtime clock
+            timerstart = t.time()
 
         self.fraction = site.moon_illumination(solar_midnight)
-        if timer: print('\tInitialize MoonInfo illum: ', t.time() - timerstart)  # runtime clock
+        if timer:
+            print('\tInitialize MoonInfo illum: ', t.time() - timerstart)  # runtime clock
+            timerstart = t.time()
 
         self.phase = site.moon_phase(solar_midnight)
-        if timer: print('\tInitialize MoonInfo phase: ', t.time() - timerstart)  # runtime clock
+        if timer:
+            print('\tInitialize MoonInfo phase: ', t.time() - timerstart)  # runtime clock
+            timerstart = t.time()
 
-        moon_pos = get_moon(solar_midnight,  location=self.site.location)
-        self.ramid = moon_pos.ra
-        self.decmid = moon_pos.dec
-        if timer: print('\tInitialize MoonInfo ra,dec at midnight: ', t.time() - timerstart)  # runtime clock
+        # moon_pos = get_moon(solar_midnight,  location=self.site.location)
+        # self.ramid = moon_pos.ra
+        # self.decmid = moon_pos.dec
+        # if timer:
+        #     print('\tInitialize MoonInfo ra,dec at midnight: ', t.time() - timerstart)  # runtime clock
+        #     timerstart = t.time()
 
         # moon position at time intervals
         moon_pos = get_moon(utc_times, location=self.site.location)
         self.ra = moon_pos.ra
         self.dec = moon_pos.dec
-        if timer: print('\tInitialize MoonInfo ras,decs: ', t.time() - timerstart)  # runtime clock
+        if timer:
+            print('\tInitialize MoonInfo ras,decs: ', t.time() - timerstart)  # runtime clock
+            timerstart = t.time()
 
         lst_times = site.local_sidereal_time(utc_times)
-        if timer: print('\tInitialize MoonInfo lst: ', t.time() - timerstart)  # runtime clock
+        if timer:
+            print('\tInitialize MoonInfo lst: ', t.time() - timerstart)  # runtime clock
+            timerstart = t.time()
 
         self.ZD,self.HA,self.AZ = calc_ZDHA(lst=lst_times, latitude=site.location.lat, ra=moon_pos.ra, dec=moon_pos.dec)
         self.AM = airmass(self.ZD)
 
-        if timer: print('\n\tInitialize MoonInfo: ', t.time() - timerstart)  # runtime clock
+        if timer:
+            print('\n\tInitialize MoonInfo: ', t.time() - timerstart)  # runtime clock
 
     def __repr__(self):
 
@@ -542,24 +589,27 @@ class MoonInfo(object):
         return "<{}: {}>".format(class_name, ",\n    ".join(attributes_strings))
 
     def table(self,showall=False):
+
         """
         Table representation of gemini_classes.TimeInfo object
         """
+
         sattr = '\t\t{0:<25s}{1}'  # print string and float
         fattr = '\t\t{0:<25s}{1:.2f}'  # print string and float
         table = []
 
         class_name = self.__class__.__name__
-        attr_names = ['ramid','decmid','fraction','phase','rise','set']
+        attr_names = ['fraction','phase','rise','set']
+        # attr_names = ['ramid', 'decmid', 'fraction', 'phase', 'rise', 'set']
         table.append(str('\n\t'+class_name+':'))
         attr_values = [getattr(self, attr) for attr in attr_names]
         for name, value in zip(attr_names, attr_values):
             if value is not None:
                 if name=='set' or name=='rise':
                     table.append(str(sattr.format(name, value.iso)))
-                elif name=='ramid':
-                    table.append(str(fattr.format('ra', value)))
-                elif name == 'decmid':
+                # elif name=='ramid':
+                #     table.append(str(fattr.format('ra', value)))
+                # elif name == 'decmid':
                     table.append(str(fattr.format('dec', value)))
                 else:
                     table.append(str(fattr.format(name, value)))
@@ -583,6 +633,7 @@ class MoonInfo(object):
 
 
 class TargetInfo(object):
+
     """
     A container class for storing all required target parameters
     for a given night (or similar time window).
@@ -711,335 +762,3 @@ class TargetInfo(object):
                 attributes_strings.append("{}={}".format(name, value))
         return "<{}: {}>".format(class_name, ",\n    ".join(attributes_strings))
 
-
-
-def convert_elev(elev_const):
-    """
-    Convert elevation constraint for observation and return as a dictionary
-        of the form {'type':string,'min':float,'max':float}
-
-    Input
-    -------
-    elev_const : string
-        elevation constraint type and limits
-        (eg. elev_const = '{Hour Angle -2.00 2.00}')
-
-    Returns
-    --------
-    dictionary
-        (eg. elev = {'type':'Airmass', 'min':0.2, 'max':0.8})
-    """
-    if (elev_const.find('None') != -1) or (elev_const.find('null') != -1) or (elev_const.find('*NaN') != -1):
-        return {'type': 'None', 'min': 0., 'max': 0.}
-    elif elev_const.find('Hour') != -1:
-        nums = re.findall(r'[+-]?\d+(?:\.\d+)?', elev_const)
-        return {'type': 'Hour Angle', 'min': float(nums[0])* u.hourangle, 'max': float(nums[1])* u.hourangle}
-    elif elev_const.find('Airmass') != -1:
-        nums = re.findall(r'[+-]?\d+(?:\.\d+)?', elev_const)
-        return {'type': 'Airmass', 'min': float(nums[0]), 'max': float(nums[1])}
-    else:
-        raise TypeError('Could not determine elevation constraint from string: ', elev_const)
-
-class Gobservations(object):
-    """
-    A container class for gemini program information.
-    
-    Requires Gcatalog object as input (see gemini_classes.Gcatalog()).
-    Automatically converts some variable types,
-    performs merging of some columns, and performs computation
-    and conversion of elevation constraints, conditions contraints, completed time,
-    and total time.
-
-
-    Attributes
-    --------
-    prog_ref            (string)                unique program identifier
-    obs_id              (string)                unique observation identifier
-    pi                  (string)                
-    inst                (string)                instrument name
-    target              (string)                target name
-    ra                  (astropy degrees)       right ascension degrees
-    dec                 (astropy degrees)       declination degrees
-    band                (int)                   integer
-    partner             (string)                gemini partner name
-    obs_status          (string)                'ready' status of observation
-    tot_time            (astropy hours)         total planned observation time
-    obs_time            (astropy hours)         completed observation time
-    obs_comp            (float)                 fraction of completed/total observation time
-    charged_time        (string)                HH:MM:SS (required to compute obs_comp)
-    obs_class           (string)                observation class
-    iq                  (float)                 image quality constraint (percentile converted to decimal value) 
-    cc                  (float)                 cloud condition constraint (percentile converted to decimal value) 
-    bg                  (float)                 sky background constraint (percentile converted to decimal value) 
-    wv                  (float)                 water vapor constraint (percentile converted to decimal value) 
-    user_prior          (string)                user priority 
-    group               (string)                observation group name
-    elev_const          (dictionary)            elevation constraint {'type':string,'min':float,'max':float}
-    ready               (boolean)               ready status
-    disperser           (string)                disperser name
-    fpu                 (string)                focal plane unit
-    grcwlen             (string)                grating control wavelength
-    crwlen              (string)                central wavelength
-    filter              (string)                filter name
-    mask                (string)                mask name 
-    xbin                (string)                xbin number 
-    ybin                (string)                ybin number 
-    """
-
-
-    def __init__(self, catinfo=None, i_obs=None):
-
-        timer = True
-        if timer:
-            import time as t
-            timerstart = t.time()  # runtime clock
-
-        n_obs = len(i_obs)
-
-        # copy required strings from catalog object 
-        self.prog_ref = catinfo.prog_ref[i_obs]
-        self.obs_id = catinfo.obs_id[i_obs]
-        self.pi = catinfo.pi[i_obs]
-        self.inst = catinfo.inst[i_obs]
-        self.target = catinfo.target[i_obs]
-        self.ra = np.array(list(map(float, catinfo.ra[i_obs]))) * u.deg
-        self.dec = np.array(list(map(float, catinfo.dec[i_obs]))) * u.deg
-        self.band = np.array(list(map(int, catinfo.band[i_obs])))
-        self.partner = catinfo.partner[i_obs]
-        self.obs_status = catinfo.obs_status[i_obs]
-        # self.qa_status = catinfo.obs_qa[i_obs]
-        # self.dataflow_step = catinfo.dataflow_step[i_obs]
-        self.tot_time = catinfo.planned_exec_time[i_obs]
-        self.obs_comp = np.zeros(n_obs)
-        # self.planned_pi_time = catinfo.planned_pi_time[i_obs]
-        self.charged_time = catinfo.charged_time[i_obs]
-        self.obs_time = self.charged_time
-        self.obs_class = catinfo.obs_class[i_obs]
-        self.bg = catinfo.sky_bg[i_obs]
-        self.wv = catinfo.wv[i_obs]
-        self.cc = catinfo.cloud[i_obs]
-        self.iq = catinfo.iq[i_obs]
-        self.user_prior = catinfo.user_prio[i_obs]
-        # self.ao = catinfo.ao[i_obs]
-        self.group = catinfo.group[i_obs]
-        # self.group_type = catinfo.gt[i_obs]
-        self.elev_const = [convert_elev(catinfo.elev_const[i]) for i in i_obs]
-        # self.time_const = catinfo.time_const[i_obs]
-        self.ready = np.array(list(map(bool, catinfo.ready[i_obs])))
-        # self.color_filter = catinfo.color_filter[i_obs]
-        # self.nd_filter = catinfo.neutral_density_filter[i_obs]
-        # self.binning = catinfo.binning[i_obs]
-        # self.windowing = catinfo.windowing[i_obs]
-        # self.lens = catinfo.lens[i_obs]
-        # self.cass_rotator = catinfo.cass_rotator[i_obs]
-        # self.bh_ccdamps = catinfo.ccd_amplifiers[i_obs]
-        # self.bh_ccdgain = catinfo.ccd_gain[i_obs]
-        # self.bh_ccdspeed = catinfo.ccd_speed[i_obs]
-        self.bh_xbin = catinfo.ccd_x_binning[i_obs]
-        self.bh_ybin = catinfo.ccd_y_binning[i_obs]
-        # self.bh_fibre = catinfo.entrance_fibre[i_obs]
-        # self.bh_expmeter_filter = catinfo.exposure_meter_filter[i_obs]
-        # self.bh_hartmann = catinfo.hartmann_flap[i_obs]
-        # self.bh_issport = catinfo.iss_port[i_obs]
-        # self.bh_pslitfilter = catinfo.post_slit_filter[i_obs]
-        # self.bh_roi = catinfo.region_of_interest[i_obs]
-        self.f2_disperser = catinfo.disperser[i_obs]
-        self.f2_filter = catinfo.filter[i_obs]
-        # self.f2_readmode = catinfo.read_mode[i_obs]
-        # self.f2_lyot = catinfo.lyot_wheel[i_obs]
-        self.f2_fpu = catinfo.focal_plane_unit[i_obs]
-        self.grcwlen = catinfo.grating_ctrl_wvl[i_obs]
-        self.xbin = catinfo.x_bin[i_obs]
-        self.ybin = catinfo.y_bin[i_obs]
-        # self.roi = catinfo.builtin_roi[i_obs]
-        # self.nodshuffle = catinfo.nod_shuffle[i_obs]
-        # self.dtax = catinfo.dta_x_offset[i_obs]
-        # self.custom_mask = catinfo.custom_mask_mdf[i_obs]
-        # self.preimage = catinfo.mos_pre_imaging[i_obs]
-        # self.amp_count = catinfo.amp_count[i_obs]
-        self.disperser = catinfo.disperser_2[i_obs]
-        self.filter = catinfo.filter_2[i_obs]
-        self.fpu = catinfo.fpu[i_obs]
-        # self.detector = catinfo.detector_manufacturer[i_obs]
-        # self.FIELD063 = catinfo.grating_ctrl_wvl_2[i_obs]
-        # self.FIELD064 = catinfo.x_bin_2[i_obs]
-        # self.FIELD065 = catinfo.y_bin_2[i_obs]
-        # self.FIELD066 = catinfo.builtin_roi_2[i_obs]
-        # self.FIELD067 = catinfo.nod_shuffle_2[i_obs]
-        # self.FIELD068 = catinfo.dta_x_offset_2[i_obs]
-        # self.FIELD069 = catinfo.custom_mask_mdf_2[i_obs]
-        # self.FIELD070 = catinfo.mos_pre_imaging_2[i_obs]
-        # self.FIELD071 = catinfo.amp_count_2[i_obs]
-        # self.FIELD072 = catinfo.disperser_3[i_obs]
-        # self.FIELD073 = catinfo.filter_3[i_obs]
-        # self.FIELD074 = catinfo.fpu_2[i_obs]
-        # self.FIELD075 = catinfo.detector_manufacturer_2[i_obs]
-        # self.pixel_scale = catinfo.pixel_scale[i_obs]
-        # self.FIELD077 = catinfo.disperser_4[i_obs]
-        # self.FIELD078 = catinfo.focal_plane_unit_2[i_obs]
-        # self.cross_dispersed = catinfo.cross_dispersed[i_obs]
-        # self.FIELD080 = catinfo.read_mode_2[i_obs]
-        self.crwlen = catinfo.central_wavelength[i_obs]
-        # self.iss_port = catinfo.iss_port_2[i_obs]
-        # self.FIELD083 = catinfo.well_depth[i_obs]
-        # self.FIELD084 = catinfo.filter_4[i_obs]
-        # self.readmode = catinfo.read_mode_3[i_obs]
-        # self.astrometric = catinfo.astrometric_field[i_obs]
-        # self.FIELD087 = catinfo.disperser_5[i_obs]
-        # self.adc = catinfo.adc[i_obs]
-        # self.observing_mode = catinfo.observing_mode[i_obs]
-        # self.coadds = catinfo.coadds[i_obs]
-        # self.exptime = catinfo.exposure_time[i_obs]
-        # self.FIELD092 = catinfo.disperser_6[i_obs]
-        self.mask = catinfo.mask[i_obs]
-        # self.eng_mask = catinfo.engineering_mask[i_obs]
-        # self.FIELD095 = catinfo.filter_[i_obs]
-        # self.order = catinfo.disperser_order[i_obs]
-        # self.nici_fpu = catinfo.focal_plane_mask[i_obs]
-        # self.nici_pupil = catinfo.pupil_mask[i_obs]
-        # self.nici_cassrot = catinfo.cass_rotator_2[i_obs]
-        # self.nici_imgmode = catinfo.imaging_mode[i_obs]
-        # self.nici_dichroic = catinfo.dichroic_wheel[i_obs]
-        # self.nici_fw1 = catinfo.filter_red_channel[i_obs]
-        # self.nici_fw2 = catinfo.filter_blue_channel[i_obs]
-        # self.nici_welldepth = catinfo.well_depth_2[i_obs]
-        # self.nici_dhs = catinfo.dhs_mode[i_obs]
-        # self.imaging_mirror = catinfo.imaging_mirror[i_obs]
-        # self.FIELD107 = catinfo.disperser_7[i_obs]
-        # self.FIELD108 = catinfo.mask_2[i_obs]
-        # self.FIELD109 = catinfo.filter_6[i_obs]
-        # self.FIELD110 = catinfo.read_mode_4[i_obs]
-        # self.camera = catinfo.camera[i_obs]
-        # self.FIELD112 = catinfo.disperser_8[i_obs]
-        # self.FIELD113 = catinfo.mask_3[i_obs]
-        # self.FIELD114 = catinfo.filter_7[i_obs]
-        # self.beam_splitter = catinfo.beam_splitter[i_obs]
-        # self.FIELD116 = catinfo.read_mode_5[i_obs]
-        # self.FIELD117 = catinfo.mask_4[i_obs]
-        # self.FIELD118 = catinfo.filter_8[i_obs]
-        # self.FIELD119 = catinfo.disperser_9[i_obs]
-        # self.FIELD120 = catinfo.disperser_10[i_obs]
-        # self.FIELD121 = catinfo.mask_5[i_obs]
-        # self.FIELD122 = catinfo.filter_9[i_obs]
-
-
-        # Merge data columns together
-        ii = np.where(self.f2_fpu != 'null')[0][:]
-        if len(ii)!=0:
-            self.fpu[ii]=self.f2_fpu[ii]
-
-        ii = np.where(self.crwlen != 'null')[0][:]
-        if len(ii)!=0:
-            self.grcwlen[ii]=self.crwlen[ii]
-
-        ii = np.where(self.bh_xbin != 'null')[0][:]
-        if len(ii)!=0:
-            self.xbin[ii]=self.bh_xbin[ii]
-
-        ii = np.where(self.bh_ybin != 'null')[0][:]
-        if len(ii)!=0:
-            self.ybin[ii]=self.bh_ybin[ii]
-
-        ii = np.where(self.mask != 'null')[0][:]
-        if len(ii)!=0:
-            self.fpu[ii]=self.mask[ii]
-
-        ii = np.where(self.group == '')[0][:]
-        if len(ii)!=0:
-            self.group[ii]=self.obs_id[ii]   
-
-        ii = np.where(self.charged_time == '')[0][:]
-        if len(ii)!=0:
-            self.charged_time[ii]='00:00:00'
-
-        # Conditions contraints
-        for i in range(0,n_obs):
-            if self.cc[i][0:1] == 'P': self.cc[i] == self.cc[i][8:10]
-            if self.cc[i][0:1] == 'A': self.cc[i] =='Any'
-            if self.iq[i][0:1] == 'P': self.iq[i] == self.iq[i][8:10]
-            if self.iq[i][0:1] == 'A': self.iq[i] =='Any'
-            if self.wv[i][0:1] == 'P': self.wv[i] == self.wv[i][8:10]
-            if self.wv[i][0:1] == 'A': self.wv[i] == 'Any'
-
-        # Convert condition constraints from strings to decimal values
-        self.iq,self.cc,self.bg,self.wv = conditions(self.iq,self.cc,self.bg,self.wv)
-
-        # Convert completed and total times.
-        for i in range(0,n_obs): #cycle through selected observations
-            #compute observed/total time, add additional time if necessary
-            charged_time = hms_to_hr(self.charged_time[i])
-            tot_time = hms_to_hr(self.tot_time[i])
-            if (charged_time>0.):
-                if 'Mirror' in self.disperser[i]:
-                    tot_time = tot_time + 0.2
-                else:
-                    tot_time = tot_time + 0.3
-            self.obs_comp[i] = charged_time / tot_time
-            self.tot_time[i] = tot_time
-            self.obs_time[i] = charged_time
-        self.obs_time = np.array(self.obs_time, dtype=float) * u.h
-        self.tot_time = np.array(self.tot_time, dtype=float) * u.h
-
-        # Get target coordinates for current epoch
-        starttime = time.Time.now()
-        coord_j2000 = SkyCoord(self.ra, self.dec, frame='icrs', unit=(u.deg, u.deg))
-        current_epoch = coord_j2000.transform_to(FK5(equinox='J' + str(starttime.jyear)))
-        self.ra = current_epoch.ra
-        self.dec = current_epoch.dec
-
-        if timer: print('\n\tInitialize Gobservations: ', t.time() - timerstart)  # runtime clock
-
-class Gcatfile(object):
-
-    """
-    Rough version of a container class for reading and storing catalog information.
-
-    Reads file columns in to a dictionary w/ column names matching headers in OT file.
-    
-    Attribute naming convention: lowercase column headers w/ underscores (eg.'Obs. Status'=obs_status).
-
-    Issue: repeated column names are not combined into a single attribute name.
-    If an column name is repeated, a numerical value is appended to the corresponding attr. name (eg. 'disperser_2').
-    """
-
-    def __init__(self,otfile=None):
-
-        cattext = []
-        with open(otfile, 'r') as readcattext: #read file into memory. 
-            #[print(line.split('\t')) for line in readcattext]
-            [cattext.append(line.split('\t')) for line in readcattext] #Split lines where tabs ('\t') are found.
-            readcattext.close()
-
-        names = np.array(cattext[8])
-        obsall = np.array(cattext[10:])
-
-        #print('\notcat attribute names...',names)
-        existing_names = []
-        for i in range(0,len(names)):
-            #remove special charaters, trim ends of string, replace whitespace with underscore
-            string=names[i].replace('.','')
-            string=re.sub(r'\W',' ',string)
-            string=string.strip()
-            string=re.sub(r' +','_',string)
-            string=string.lower()
-            if string=='class': #change attribute name (python doesn't allow attribute name 'class')
-                string = 'obs_class'
-            if np.isin(string,existing_names): #add number to end of repeated attribute name
-                rename = True
-                j = 0    
-                while rename:
-                    if j>=8: #if number 9 is reached, make next number 10
-                        tempstring = string+'_1'+chr(50+j-10)
-                    else:
-                        tempstring = string+'_'+chr(50+j)
-                    if np.isin(tempstring,existing_names): #if name taken, increment number and check again
-                        j+=1
-                    else: 
-                        string = tempstring
-                        rename = False
-
-            setattr(self, string, obsall[:,i]) #set attribute name an include corresponding catalog column
-            existing_names.append(string) #add name to library of used names
-            #print(string)
-
-        #print('\nFound '+str(len(obsall))+' observations in '+str(otfile))
