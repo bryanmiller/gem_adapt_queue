@@ -262,7 +262,7 @@ class PlanInfo(object):
         return table
 
     @classmethod
-    def priority(cls,obs,timeinfo,targetinfo):
+    def priority(cls, i_obs, obs, timeinfo, targetinfo):
         """
         Generate a plan with the priority scheduling algorithm
 
@@ -289,8 +289,9 @@ class PlanInfo(object):
         """
         verbose = False
         scheduler_order = False
-        plot_construction = True
+        plot_construction = False
 
+        plotted = False
         plantype = 'Priority'  # define plan type
         plan = np.full(timeinfo.nt, -1)
 
@@ -299,7 +300,7 @@ class PlanInfo(object):
 
         dt = timeinfo.dt
         nt = timeinfo.nt
-        n_obs = len(obs.obs_id)
+        n_obs = len(i_obs)
         nsel = 0
         ii = np.where(plan == -1)[0][:]  # unscheduled time indices
 
@@ -358,17 +359,17 @@ class PlanInfo(object):
                     nobswin = iend - istart + 1
 
                     if verbose:
-                        print('Inst: ',obs.inst[iimax])
-                        print('Disperser: ',obs.disperser[iimax])
+                        print('Inst: ',obs.inst[i_obs[iimax]])
+                        print('Disperser: ',obs.disperser[i_obs[iimax]])
 
                     ntcal = 0
-                    if 'GMOS' not in obs.inst[iimax]:
-                        if 'Mirror' not in obs.disperser[iimax] and 'null' not in obs.disperser[iimax]:
+                    if 'GMOS' not in obs.inst[i_obs[iimax]]:
+                        if 'Mirror' not in obs.disperser[i_obs[iimax]] and 'null' not in obs.disperser[i_obs[iimax]]:
                             ntcal = 3
                             if verbose: print('add ntcall=3')
 
                     # total time remaining in observation, include calibration time
-                    ttime = np.round((obs.tot_time[iimax] - obs.obs_time[iimax])*10. + 0.5*u.h) /10
+                    ttime = np.round((obs.tot_time[i_obs[iimax]] - obs.obs_time[i_obs[iimax]])*10. + 0.5*u.h) /10
                     nttime = int(np.round(ttime / dt) + ntcal) #number of steps
 
                     # Try not to leave little pieces of programs
@@ -478,21 +479,22 @@ class PlanInfo(object):
                 if verbose:
                     print('Chosen index jstart',jstart)
                     print('Chosen index jend',jend)
-                    print('Current obs time: ', obs.obs_time[iimax])
-                    print('Current tot time: ', obs.tot_time[iimax])
+                    print('Current obs time: ', obs.obs_time[i_obs[iimax]])
+                    print('Current tot time: ', obs.tot_time[i_obs[iimax]])
 
                 nsel = nsel + 1  # increment number of selected observations
                 plan[jstart:jend+1] = iimax  # set plan slots to index of scheduled observation
                 ntmin = np.minimum(nttime - ntcal, nobswin)  # observation time slots scheduled (minus cal)
-                obs.obs_time[iimax] = obs.obs_time[iimax] + dt * ntmin  # update observed time
+                obs.obs_time[i_obs[iimax]] = obs.obs_time[i_obs[iimax]] + dt * ntmin  # update observed time
                 # ii_obs = np.where(obs.obs_id == obs.prog_ref[iimax])[0][:]  # indices of obs. in same program
-                obs.obs_comp[iimax] = obs.obs_comp[iimax] + dt * ntmin / obs.tot_time[iimax]  # update cplt fraction
+                obs.obs_comp[i_obs[iimax]] = obs.obs_comp[i_obs[iimax]] + dt * ntmin / obs.tot_time[i_obs[iimax]]  # update cplt fraction
 
                 if plot_construction:  # add scheduled target to plan build plot
+                    plotted=True
                     _plotam_planbuildplot(pp=pp, timeinfo=timeinfo, targetinfo=targetinfo, i=iimax, jstart=jstart,
                                    jend=jend)
 
-                if obs.obs_comp[iimax]>=1.:  # completed observation
+                if obs.obs_comp[i_obs[iimax]]>=1.:  # completed observation
                     targetinfo[iimax].weight = targetinfo[iimax].weight * -1  # set all target weights to neg.
                 else:  # incomplete observation
                     targetinfo[iimax].weight[jstart:jend+1] = targetinfo[iimax].weight[jstart:jend+1] * -1  # set scheduled target weights to neg.
@@ -503,16 +505,16 @@ class PlanInfo(object):
                     print('New obs. weights: ', targetinfo[iimax].weight)
                     print('nttime - ntcal , nobswin: ',nttime - ntcal , nobswin)
                     print('ntmin: ',ntmin)
-                    print('Obs tot time: ', obs.tot_time[iimax])
+                    print('Obs tot time: ', obs.tot_time[i_obs[iimax]])
 
                 # add time to total if observation was not fully completed
-                if obs.obs_time[iimax] < obs.tot_time[iimax]:
-                    obs.tot_time[iimax] = obs.tot_time[iimax] + 0.3*u.h
+                if obs.obs_time[i_obs[iimax]] < obs.tot_time[i_obs[iimax]]:
+                    obs.tot_time[i_obs[iimax]] = obs.tot_time[i_obs[iimax]] + 0.3*u.h
 
                 if verbose:
                     print('Current program: ',plan)
-                    print('New obs time: ', obs.obs_time[iimax])
-                    print('New comp time: ', obs.obs_comp[iimax])
+                    print('New obs time: ', obs.obs_time[i_obs[iimax]])
+                    print('New comp time: ', obs.obs_comp[i_obs[iimax]])
 
                 if scheduler_order:
                     print('\tScheduled: ',iimax,targetinfo[iimax].name,'from',timeinfo.utc[jstart].iso,'to',timeinfo.utc[jend].iso)
@@ -522,7 +524,10 @@ class PlanInfo(object):
             ii = np.where(plan == -1)[0][:]  # get indices of remaining time slots
 
         if plot_construction:  # save and clear plan build plot
-            _close_planbuildplot(pp=pp)
+            if plotted:
+                _close_planbuildplot(pp=pp)
+            else:
+                plt.clf()
 
         # finalize plan and retrieve details
         plan = _optimize_plan(plan, targetinfo)  # Try rearranging plan
@@ -533,7 +538,7 @@ class PlanInfo(object):
         night_length = timeinfo.night_length
         cplt = np.full(len(obslist), False, dtype=bool)  # completion status of scheduled obs.
         for i in range(0, len(i_start)):
-            if obs.obs_comp[plan[i_start[i]]] >= 1.:
+            if obs.obs_comp[i_obs[plan[i_start[i]]]] >= 1.:
                 cplt[i] = True
 
         return cls(plantype=plantype, plan=plan, obslist=obslist, i_start=i_start, i_end=i_end, hours=hours,

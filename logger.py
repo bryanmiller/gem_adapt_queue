@@ -26,7 +26,7 @@ def initLogFile(filename, catalogfile, site, start, n_nights, dst):
         log.close()
     return
 
-def logPlanStats(filename, obs, plan, timeinfo, suninfo, mooninfo, targetinfo, acond):
+def logPlanStats(filename, i_obs, obs, plan, timeinfo, suninfo, mooninfo, targetinfo, acond):
 
     with open(filename, 'a') as log:
         log.write('\n\n -----------------------------------------------------------')
@@ -36,7 +36,7 @@ def logPlanStats(filename, obs, plan, timeinfo, suninfo, mooninfo, targetinfo, a
         [log.write('\n' + line) for line in suninfo.table()]
         [log.write('\n' + line) for line in mooninfo.table()]
         [log.write('\n' + line) for line in plan.table()]
-        [log.write('\n' + line) for line in printPlanTable(plan=plan, obs=obs, timeinfo=timeinfo, targetinfo=targetinfo)]
+        [log.write('\n' + line) for line in printPlanTable(plan=plan, i_obs=i_obs, obs=obs, timeinfo=timeinfo, targetinfo=targetinfo)]
         log.close()
 
     return
