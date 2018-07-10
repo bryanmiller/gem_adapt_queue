@@ -31,12 +31,12 @@ def sun_horizon(site):
 
     Parameter
     ---------
-    site : 'astroplan.Observer'
+    site : '~astroplan.Observer'
         class with observer's longitude, latitude, elevation.
 
     Return
     --------
-    'astropy.units.Quantity'
+    '~astropy.units.Quantity'
         degree angle of sun at sunset
     """
     sun_horiz = -.83 * u.degree
@@ -362,11 +362,11 @@ class SunInfo(object):
         _checkinput_time(variable=utc_times,varname='utc_times')
 
         # sunset/sunrise times
-        # sun_horiz = sun_horizon(site)  # compute sun set/rise angle from zenith
-        # self.set = site.sun_set_time(utc_times[0], which='nearest', horizon=sun_horiz)
-        # self.rise = site.sun_rise_time(utc_times[0], which='next', horizon=sun_horiz)
-        self.set = None
-        self.rise = None
+        sun_horiz = sun_horizon(site)  # compute sun set/rise angle from zenith
+        self.set = site.sun_set_time(utc_times[0], which='nearest', horizon=sun_horiz)
+        self.rise = site.sun_rise_time(utc_times[0], which='next', horizon=sun_horiz)
+        # self.set = None
+        # self.rise = None
         # Sun info (assuming sun coordinates constant throughout night)
         solar_midnight = site.midnight(utc_times[0], which='nearest')  # get local midnight in utc time
         sun_pos = get_sun(solar_midnight)
@@ -514,22 +514,22 @@ class MoonInfo(object):
             print('\n\tCheck times: ', t.time() - timerstart)  # runtime clock
             timerstart = t.time()
 
-        # sun_horiz = sun_horizon(site)  # compute sun set/rise angle from zenith
-        # if timer:
-        #     print('\n\tInitialize MoonInfo horiz: ', t.time() - timerstart)  # runtime clock
-        #     timerstart = t.time()
+        sun_horiz = sun_horizon(site)  # compute sun set/rise angle from zenith
+        if timer:
+            print('\n\tInitialize MoonInfo horiz: ', t.time() - timerstart)  # runtime clock
+            timerstart = t.time()
 
-        # self.set = site.moon_set_time(utc_times[0], which='next', horizon=sun_horiz)
-        # if timer:
-        #     print('\tInitialize MoonInfo set: ', t.time() - timerstart)  # runtime clock
-        #     timerstart = t.time()
-        #
-        # self.rise = site.moon_rise_time(utc_times[0], which='nearest', horizon=sun_horiz)
-        # if timer:
-        #     print('\tInitialize MoonInfo rise: ', t.time() - timerstart)  # runtime clock
-        #     timerstart = t.time()
-        self.set = None
-        self.rise = None
+        self.set = site.moon_set_time(utc_times[0], which='next', horizon=sun_horiz)
+        if timer:
+            print('\tInitialize MoonInfo set: ', t.time() - timerstart)  # runtime clock
+            timerstart = t.time()
+
+        self.rise = site.moon_rise_time(utc_times[0], which='nearest', horizon=sun_horiz)
+        if timer:
+            print('\tInitialize MoonInfo rise: ', t.time() - timerstart)  # runtime clock
+            timerstart = t.time()
+        # self.set = None
+        # self.rise = None
 
         solar_midnight = site.midnight(utc_times[0], which='nearest')  # get local midnight in utc time
         if timer:
@@ -546,12 +546,12 @@ class MoonInfo(object):
             print('\tInitialize MoonInfo phase: ', t.time() - timerstart)  # runtime clock
             timerstart = t.time()
 
-        # moon_pos = get_moon(solar_midnight,  location=self.site.location)
-        # self.ramid = moon_pos.ra
-        # self.decmid = moon_pos.dec
-        # if timer:
-        #     print('\tInitialize MoonInfo ra,dec at midnight: ', t.time() - timerstart)  # runtime clock
-        #     timerstart = t.time()
+        moon_pos = get_moon(solar_midnight,  location=self.site.location)
+        self.ramid = moon_pos.ra
+        self.decmid = moon_pos.dec
+        if timer:
+            print('\tInitialize MoonInfo ra,dec at midnight: ', t.time() - timerstart)  # runtime clock
+            timerstart = t.time()
 
         # moon position at time intervals
         moon_pos = get_moon(utc_times, location=self.site.location)
@@ -599,17 +599,17 @@ class MoonInfo(object):
         table = []
 
         class_name = self.__class__.__name__
-        attr_names = ['fraction','phase','rise','set']
-        # attr_names = ['ramid', 'decmid', 'fraction', 'phase', 'rise', 'set']
+        # attr_names = ['fraction','phase','rise','set']
+        attr_names = ['ramid', 'decmid', 'fraction', 'phase', 'rise', 'set']
         table.append(str('\n\t'+class_name+':'))
         attr_values = [getattr(self, attr) for attr in attr_names]
         for name, value in zip(attr_names, attr_values):
             if value is not None:
                 if name=='set' or name=='rise':
                     table.append(str(sattr.format(name, value.iso)))
-                # elif name=='ramid':
-                #     table.append(str(fattr.format('ra', value)))
-                # elif name == 'decmid':
+                elif name=='ramid':
+                    table.append(str(fattr.format('ra', value)))
+                elif name == 'decmid':
                     table.append(str(fattr.format('dec', value)))
                 else:
                     table.append(str(fattr.format(name, value)))

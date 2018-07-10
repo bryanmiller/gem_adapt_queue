@@ -1,0 +1,34 @@
+UT	Instrument	GMOS FPU	GMOS Disperser	F2 FPU
+----	-----	--------	--------------	------
+2018-06-30	GPI,cal,GMOS-S,INGRINS,Flamingos2	null	null	null
+2018-07-01	GPI,cal,GMOS-S,INGRINS,Flamingos2	null	null	null
+2018-07-02	GPI,cal,GMOS-S,INGRINS,Flamingos2	null	null	null
+2018-07-03	GPI,cal,GMOS-S,INGRINS,Flamingos2	null	null	null
+2018-07-04	GPI,cal,GMOS-S,INGRINS,Flamingos2	null	null	null
+2018-07-05	GPI,cal,GMOS-S,INGRINS,Flamingos2	null	null	null
+2018-07-06	GPI,cal,GMOS-S,INGRINS,Flamingos2	Longslit 1.00 arcsec	null	null
+2018-07-07	GPI,cal,GMOS-S,INGRINS,Flamingos2	null	null	null
+2018-07-08	GPI,cal,GMOS-S,INGRINS,Flamingos2	null	null	null
+2018-07-09	GPI,cal,GMOS-S,INGRINS,Flamingos2	null	null	null
+2018-07-10	GPI,cal,GMOS-S,Canopus,Flamingos2	null	null	null
+2018-07-11	GPI,cal,GMOS-S,Canopus,Flamingos2	null	null	null
+2018-07-12	GPI,cal,GMOS-S,Canopus,Flamingos2	null	null	null
+2018-07-13	GPI,cal,GMOS-S,Canopus,Flamingos2	null	null	null
+2018-07-14	GPI,cal,GMOS-S,Canopus,Flamingos2	null	null	null
+2018-07-15	GPI,cal,GMOS-S,Canopus,Flamingos2	null	null	null
+2018-07-16	GPI,cal,GMOS-S,Canopus,Flamingos2	null	null	null
+2018-07-17	GPI,cal,Canopus,Flamingos2	null	null	null
+2018-07-18	GPI,cal,Canopus,Flamingos2	null	null	null
+2018-07-19	GPI,cal,Canopus,Flamingos2	null	null	null
+2018-07-20	GPI,cal,Canopus,Flamingos2	null	null	null
+2018-07-21	GPI,cal,Canopus,Flamingos2	null	null	null
+2018-07-22	GPI,cal,Canopus,Flamingos2	null	null	null
+2018-07-23	GSAOI,cal,Canopus,Flamingos2	null	null	null
+2018-07-24	GSAOI,cal,Canopus,Flamingos2	null	null	null
+2018-07-25	GSAOI,cal,Canopus,Flamingos2	null	null	null
+2018-07-26	GSAOI,cal,Canopus,Flamingos2	null	null	null
+2018-07-27	GSAOI,cal,Canopus,Flamingos2	null	null	null
+2018-07-28	GSAOI,cal,Canopus,Flamingos2	null	null	null
+2018-07-29	GSAOI,cal,Canopus,Flamingos2	null	null	null
+2018-07-30	GSAOI,cal,Canopus,Flamingos2	null	null	null
+2018-07-31	GSAOI,cal,Canopus,Flamingos2	null	null	null

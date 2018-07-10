@@ -1,6 +1,7 @@
-import numpy as np
 import re
 import astropy.units as u
+import numpy as np
+from joblib import Parallel, delayed
 
 __all__=[]
 
@@ -157,6 +158,12 @@ def weight_ra(targetinfo, tot_time, obs_time):
     targetinfo : list of 'gemini_classes.TargetInfo'
         list of objects with target information
 
+    tot_time : array of '~astropy.units.Quantity'
+        Total observation times
+
+    obs_time : array of '~astropy.units.Quantity'
+        Amount of tot_time completed/observed.
+
     Return
     -------
     wra : array of floats
@@ -178,15 +185,20 @@ def weight_ra(targetinfo, tot_time, obs_time):
         print('histogram bin indices', bin_nums)
 
     # Sum total observing hours in bins and divide mean (wra weight)
-    wra = np.zeros(12) * u.h
+    wra_factors = np.zeros(12) * u.h
     for i in np.arange(0, 12):
         ii = np.where(bin_nums == i)[0][:]
-        wra[i] = wra[i] + sum(tot_time[ii] - obs_time[ii])
-    if verbose: print('Total time (ra distribution)', wra)
-    wra = wra / np.mean(wra)
+        wra_factors[i] = wra_factors[i] + sum(tot_time[ii] - obs_time[ii])
+    if verbose: print('Total time (ra distribution)', wra_factors)
+    wra_factors = wra_factors / np.mean(wra_factors)
 
-    if verbose: print('wra (ra distribution weight)', wra)
-    return wra, bin_edges
+    if verbose: print('wra_factors (ra distribution weight)', wra_factors)
+
+    wra = np.empty(len(ras))  # reset index value
+    for j in np.arange(12):  # Get hour angle histogram bin of current target
+        wra[np.where(np.logical_and(ras >= bin_edges[j], ras  < bin_edges[j + 1]))[0][:]] = wra_factors[j]
+
+    return wra
 
 def weight_ha(latitude, dec, HA):
     """
@@ -353,6 +365,39 @@ def convert_elev(elev_const):
     else:
         raise TypeError('Could not determine elevation constraint from string: ', elev_const)
 
+def getprstatus(prog_ref, obs_time):
+    """
+    Return flags indicating program status.
+    If any observation in a program is partially completed, flags for all other observations
+    in progarm are True. Observations in not yet observed programs will have False flags.
+
+    Parameters
+    ----------
+    prog_ref : np.array of strings
+        Program reference identifiers for observations
+
+    obs_time : np.array of '~astropy.unit.Quantity'
+        Time observed for each observation
+
+    Returns
+    -------
+    prstatus : np.array of booleans
+        True if program has been started.
+    """
+
+    verbose = False
+    progs = np.unique(prog_ref)
+    prstatus = np.full(len(prog_ref),False)
+    if verbose: print(prog_ref)
+    for prog in progs:
+        jj = np.where(prog_ref == prog)[0][:]
+        if verbose: print(prog,jj)
+        if np.any(obs_time[jj] > 0.):
+            prstatus[jj] = True
+    if verbose:print(prstatus)
+
+    return prstatus
+
 def obsweight(dec, AM, HA, AZ, band, user_prior, prstatus, latitude,
               cond, acond, obstatus, elev, wind=[0.*u.m/u.s, 0.*u.deg], wra=1.):
     """
@@ -365,7 +410,6 @@ def obsweight(dec, AM, HA, AZ, band, user_prior, prstatus, latitude,
     --------
     twcond - value representative of required observation conditions
     wstatus - observation and program status (increased if observation or program are partially completed)
-
 
     Inputs
     --------
@@ -456,9 +500,7 @@ def obsweight(dec, AM, HA, AZ, band, user_prior, prstatus, latitude,
 
     return weight
 
-
-
-def calc_weight(site,obs,timeinfo,targetinfo,acond):
+def calc_weight(site,i_obs,obs,targetinfo,acond,vsbs):
 
     """
     Calculate weights for multiple observations.
@@ -488,63 +530,35 @@ def calc_weight(site,obs,timeinfo,targetinfo,acond):
     """
 
     verbose = False
-
     #   ================== ra distribution weights ====================
-    wra, bin_edges = weight_ra(targetinfo=targetinfo, tot_time=obs.tot_time, obs_time=obs.obs_time)
+    wra = weight_ra(targetinfo=targetinfo, tot_time=obs.tot_time[i_obs], obs_time=obs.obs_time[i_obs])
     if verbose: print('wra (ra distribution weight)',wra)
 
-    nt = timeinfo.nt
-    n_obs = len(obs.obs_id)
-    for i in range(n_obs):
+    # ttime = np.round((obs.tot_time[i_obs] - obs.obs_time[i_obs]) * 10) / 10  # remaining time in observations
+    prstatus = getprstatus(prog_ref=obs.prog_ref[i_obs],obs_time=obs.obs_time[i_obs])
+    if verbose: print('prstatus (program status [started=True])', prstatus)
 
-        ttime = np.round((obs.tot_time[i] - obs.obs_time[i]) * 10) / 10  # remaining time in observation
-        if verbose:
-            ii = np.where(obs.prog_ref == obs.prog_ref[i])[0][:]
-            ptime = np.round(sum(obs.tot_time[ii] - obs.obs_time[ii]) * 10) / 10
-            print('Prog. remaining time (ptime):',ptime)
-            print('Obs. remaining time (ttime):',ttime)
+    sbcond = Parallel(n_jobs=10)(delayed(vsb_to_sbcond)(vsb=vsbs[i]) for i in range(len(i_obs)))
 
-        if ttime > 0.:
+    # if verbose:
+    #     for i in range(0,len(i_obs)):
+    #         print('Obs. id: ', obs.obs_id[i_obs[i]])
+    #         print('dec', targetinfo[i].dec.deg)
+    #         print('latitude', site.location.lat)
+    #         print('band', obs.band[i_obs[i]])
+    #         print('user_prior', obs.user_prior[i_obs[i]])
+    #         print('prog. partially completed (prstatus): ', prstatus[i])
+    #         print('elevation constraint ', obs.elev_const[i_obs[i]])
+    #         print('condition constraints', {'iq': obs.iq[i_obs[i]], 'cc': obs.cc[i_obs[i]], 'bg': obs.bg[i_obs[i]], 'wv': obs.wv[i_obs[i]]})
+    #         print('actual conditions', {'iq': acond[0], 'cc': acond[1], 'bg': sbcond[i], 'wv': acond[3]})
 
-            ii = 0  # reset index value
-            for j in np.arange(12):  # Get hour angle histogram bin of current target
-                if bin_edges[j] <= obs.ra[i] < bin_edges[j + 1]:
-                    ii = j
-
-            # ========= Program partially completed ==========
-            jj = np.where(obs.prog_ref == obs.prog_ref[i])[0][:]
-            prstatus = np.any(obs.obs_time[jj] > 0.)
-
-            # ========= convert sky background mag ==========
-            sbcond = vsb_to_sbcond(vsb=targetinfo[i].vsb)
-
-            cond = {'iq': obs.iq[i], 'cc': obs.cc[i], 'bg': obs.bg[i], 'wv': obs.wv[i]}
-            actualcond = {'iq': acond[0], 'cc': acond[1], 'bg': sbcond, 'wv': acond[3]}
-            if verbose:
-                print('cond', cond)
-                print('acond', actualcond)
-
-            # ========= convert elevation constraint ==========
-            # elev = convert_elev(elev_const=obs.elev_const[i])
-
-            if verbose:
-                print('Obs. id: ',obs.obs_id[i])
-                print('dec',targetinfo[i].dec.deg)
-                print('latitude',site.location.lat)
-                print('band',obs.band[i])
-                print('user_prior',obs.user_prior[i])
-                print('prog. partially completed (prstatus): ',prstatus)
-                print('elevation constraint ',elev)
-                print('condition constraints',cond)
-                print('actual conditions',acond)
-
-            targetinfo[i].weight = obsweight(dec=targetinfo[i].dec, AM=targetinfo[i].AM,
-                                         HA=targetinfo[i].HA, AZ=targetinfo[i].AZ, band=obs.band[i],
-                                         user_prior=obs.user_prior[i], prstatus=prstatus,
-                                         latitude=site.location.lat, cond=cond, acond=actualcond,
-                                         obstatus=obs.obs_time[i], wra=wra[ii], elev=obs.elev_const[i])
-        else:
-            targetinfo[i].weight = np.zeros(nt)
-
+    weights = Parallel(n_jobs=10)(delayed(obsweight)(dec=targetinfo[i].dec, AM=targetinfo[i].AM,
+                                     HA=targetinfo[i].HA, AZ=targetinfo[i].AZ, band=obs.band[i_obs[i]],
+                                     user_prior=obs.user_prior[i_obs[i]], prstatus=prstatus[i],
+                                     latitude=site.location.lat,
+                                     cond={'iq': obs.iq[i_obs[i]], 'cc': obs.cc[i_obs[i]], 'bg': obs.bg[i_obs[i]], 'wv': obs.wv[i_obs[i]]},
+                                     acond={'iq': acond[0], 'cc': acond[1], 'bg': sbcond[i], 'wv': acond[3]},
+                                     obstatus=obs.obs_time[i_obs[i]], wra=wra[i], elev=obs.elev_const[i_obs[i]]) for i in range(len(i_obs)))
+    for k in range(len(i_obs)): targetinfo[k].weight = weights[k]
 
     return targetinfo
