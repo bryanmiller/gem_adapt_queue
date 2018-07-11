@@ -1,16 +1,26 @@
 import numpy as np
 
-def intervals(int_array):
+def intervals(indices):
+    """
+    Find the number and properties of contiguous intervals for an array of indices
 
-    # find the number and properties of contiguous intervals in a
-    # vector of indices
+    Parameters
+    ----------
+    indices : np.array of integers
+        Array of indices
 
-    ni = len(int_array)
+    Returns
+    -------
+    integer array
+
+    """
+
+    ni = len(indices)
     cvec = np.zeros(ni,dtype=int)
     nint=1
     cvec[0] = nint
     for j in range(1,ni):
-        if (int_array[j] != (int_array[j-1] + 1)):
+        if (indices[j] != (indices[j - 1] + 1)):
             nint=nint+1
         cvec[j] = nint
 
@@ -20,15 +30,15 @@ def intervals(int_array):
 
 if __name__=='__main__':
     print('\nTest intervals.py...')
-    print('Expected output: indices of first interval of -1\'s from array')
+    print('Get intervals of continuous -1s...')
 
-    int_array = np.array([0, 0, 0, 0, -1, -1, -1, -1, 2, 2, 2, 2, 3, 3, 3, 3, 2, 2, 2, 2, -1, -1, -1, -1], dtype=int)
-    print('input:', int_array)
+    indices = np.array([0, 0, 0, 0, -1, -1, -1, -1, 2, 2, 2, 2, 3, 3, 3, 3, 2, 2, 2, 2, -1, -1, -1, -1], dtype=int)
+    ints = np.zeros(len(indices),dtype=int)
+    i_negones = np.where(indices == -1)[0][:]
+    ints[i_negones] = intervals(i_negones)
 
-    negones = np.where(int_array==-1)[0][:]
-    ii = np.where(intervals(negones)==1)[0][:]
-    first = negones[ii]
-    print('output: ',first)
+    print('input:', indices)
+    print('output: ', ints)
 
-    assert((first == np.array([4,5,6,7])).all())
+    assert((ints == np.array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2])).all())
     print('Test successful!')

@@ -116,7 +116,6 @@ def _init_planbuildplot(timeinfo):
     pp : class 'matplotlib.backends.backend_pdf.PdfPages'
         PdfPages class object for plot
     """
-    # pp = PdfPages(str(timeinfo.utc[0].iso)[:10]+'_amplot_gif.pdf')
     date = str(timeinfo.local[0].iso)[0:10]
     pp = PdfPages('amplotbuild'+date+'.pdf')
     plt.xlim(timeinfo.utc[0].plot_date, timeinfo.utc[-1].plot_date)
@@ -165,7 +164,10 @@ def _plotam_planbuildplot(pp, timeinfo, targetinfo, i, jstart, jend):
     jend : int
         index of scheduled end time in timeinfo
     """
-
+    plt.xlim(timeinfo.utc[0].plot_date, timeinfo.utc[-1].plot_date)
+    plt.ylim(2.1, 0.9)
+    plt.ylabel('Airmass')
+    plt.xlabel('UTC')
     plt.plot_date(timeinfo.utc.plot_date, targetinfo[i].AM, linestyle='-', linewidth=1,
                   color='black', markersize=0)
     plt.plot_date(timeinfo.utc[jstart:jend+1].plot_date, targetinfo[i].AM[jstart:jend+1], linestyle='-',
@@ -175,7 +177,10 @@ def _plotam_planbuildplot(pp, timeinfo, targetinfo, i, jstart, jend):
                  fontsize = 6)
     plt.xticks(rotation=20)
     plt.tight_layout()
-    pp.savefig()
+    plt.show(block=False)
+    input(' Press enter to close...')
+    plt.close()
+    # pp.savefig()
     return
 
 class PlanInfo(object):
@@ -262,7 +267,7 @@ class PlanInfo(object):
         return table
 
     @classmethod
-    def priority(cls, i_obs, obs, timeinfo, targetinfo):
+    def priority(cls, i_obs, obs, timeinfo, targetinfo, showbuildup):
         """
         Generate a plan with the priority scheduling algorithm
 
@@ -288,14 +293,13 @@ class PlanInfo(object):
 
         """
         verbose = False
-        scheduler_order = False
-        plot_construction = False
+        scheduler_order = False  # print to terminal as plan is bring constructed
 
         plotted = False
         plantype = 'Priority'  # define plan type
         plan = np.full(timeinfo.nt, -1)
 
-        if plot_construction:  # initialize plan build plot figure and pdf file
+        if showbuildup:  # initialize plan build plot figure and pdf file
             pp = _init_planbuildplot(timeinfo=timeinfo)
 
         dt = timeinfo.dt
@@ -489,7 +493,7 @@ class PlanInfo(object):
                 # ii_obs = np.where(obs.obs_id == obs.prog_ref[iimax])[0][:]  # indices of obs. in same program
                 obs.obs_comp[i_obs[iimax]] = obs.obs_comp[i_obs[iimax]] + dt * ntmin / obs.tot_time[i_obs[iimax]]  # update cplt fraction
 
-                if plot_construction:  # add scheduled target to plan build plot
+                if showbuildup:  # add scheduled target to plan build plot
                     plotted=True
                     _plotam_planbuildplot(pp=pp, timeinfo=timeinfo, targetinfo=targetinfo, i=iimax, jstart=jstart,
                                    jend=jend)
@@ -523,7 +527,7 @@ class PlanInfo(object):
 
             ii = np.where(plan == -1)[0][:]  # get indices of remaining time slots
 
-        if plot_construction:  # save and clear plan build plot
+        if showbuildup:  # save and/or clear plan buildup plot.
             if plotted:
                 _close_planbuildplot(pp=pp)
             else:

@@ -3,10 +3,10 @@ import numpy as np
 def printPlanTable(plan, i_obs, obs, timeinfo, targetinfo):
     verbose = False
 
-    sprint = '\t{0:14.12s}{1:12.10s}{2:7.5s}{3:7.5s}{4:7.5s}{5:7.5s}{6:8.6s}{7:8.6s}{8:7.5s}{9:8.6s}{10:10.10}'
-    table = []
 
+    table = []
     table.append(str('\n\t'+plan.type+' schedule:'))
+    sprint = '\t{0:14.12s}{1:12.10s}{2:7.5s}{3:7.5s}{4:7.5s}{5:7.5s}{6:8.6s}{7:8.6s}{8:7.5s}{9:8.6s}{10:10.10}'
     table.append(str(sprint.format('Obs. ID','Target','Instr','UTC','LST','Start','End','Hrs','AM','HA','Completed')))
     table.append(str(sprint.format('-------','------','-----','---','---','-----','---','---','--','--','---------')))
 
