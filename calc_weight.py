@@ -124,7 +124,7 @@ def weight_am(AM, HA, elev):
 
     return wam
 
-def weight_wind(wind, AZ):
+def weight_wind(AZ, wind=[0.*u.m/u.s, 0.*u.deg]):
     """
     Wind conditions weights:
         - Set wwind to 0. at times where the wind speed is greater than 10km/h
@@ -149,7 +149,7 @@ def weight_wind(wind, AZ):
     wwind[ii] = 0.
     return wwind
 
-def weight_ra(targetinfo, tot_time, obs_time):
+def weight_ra(ras, tot_time, obs_time):
     """
     Compute a weight representing the observation target ra-distribution.
 
@@ -171,7 +171,6 @@ def weight_ra(targetinfo, tot_time, obs_time):
     """
     verbose = False
 
-    ras = np.array([target.ra / u.deg for target in targetinfo]) * u.deg
     bin_edges = [0., 30., 60., 90., 120., 150., 180., 210., 240., 270., 300., 330., 360.] * u.deg
 
     if verbose:
@@ -399,7 +398,7 @@ def getprstatus(prog_ref, obs_time):
     return prstatus
 
 def obsweight(dec, AM, HA, AZ, band, user_prior, prstatus, latitude,
-              cond, acond, obstatus, elev, wind=[0.*u.m/u.s, 0.*u.deg], wra=1.):
+              cond, acond, obstatus, elev, wind=[0.*u.m/u.s, 0.*u.deg], wra=1., getfunc=False):
     """
     Calculate weights for single observation.
 
@@ -408,25 +407,51 @@ def obsweight(dec, AM, HA, AZ, band, user_prior, prstatus, latitude,
 
     weights
     --------
-    twcond - value representative of required observation conditions
+    twcond - value representative of required observation conditions.
     wstatus - observation and program status (increased if observation or program are partially completed)
 
-    Inputs
-    --------
-    cond - required sky conditions
-    acond - actual sky conditions
-    dec  - target declination
-    AM   - target airmasses
+    Parameters
+    ----------
+    cond : dict
+        required sky conditions
+
+    acond : dict
+        actual sky conditions
+
+    dec : 'astropy.coordinates.angles.Latitude'
+        target declination
+
+    AM : array of floats
+        Target airmass at times throughout observing window.
+
     HA   - target hour angles
+
     AZ   - target azimuths
-    latitude - observer latitude
-    band - ranking band (1, 2, 3, 4)
-    user_prior - user priority (Low, Medium, High)
-    pstatus - program completion as fraction
-    ostatus - observation completion as fraction
-    wind - wind conditions (speed (m/s) and direction)
+
+    latitude : 'astropy.coordinates.angles.Latitude'
+        observer latitude
+
+    band : int
+        ranking band (1, 2, 3, 4)
+
+    user_prior : str
+        user priority (Low, Medium, High)
+
+    pstatus : float
+        program completion as fraction
+
+    ostatus : float
+        observation completion as fraction
+
+    wind : list of '~astropy.unit.Quantity'
+        wind conditions (speed (m/s) and direction)
+
     wra - RA distribution weights
+
     elev - elevation constraint
+
+    getfunc : bool
+        Returns a string of the weighting function (NOTE: does not compute weights if selected)
 
     Return
     --------
@@ -436,6 +461,10 @@ def obsweight(dec, AM, HA, AZ, band, user_prior, prstatus, latitude,
 
     # Weighting schemes
     weighting1 = True
+
+    if getfunc:
+        if weighting1:
+            return str('(twcond + wstatus * wha + wband + wprior + wbal + wra) * cmatch * wam * wwind')
 
     # ======================== Matching actual + required conditions ========================
     cmatch = weight_cond_match(cond=cond, acond=acond, negHA=min(HA) < 0.*u.hourangle)
@@ -500,7 +529,7 @@ def obsweight(dec, AM, HA, AZ, band, user_prior, prstatus, latitude,
 
     return weight
 
-def calc_weight(site,i_obs,obs,targetinfo,acond,vsbs):
+def calc_weight(site,i_obs,obs,targetinfo,acond,vsbs,wra,prstatus):
 
     """
     Calculate weights for multiple observations.
@@ -531,12 +560,6 @@ def calc_weight(site,i_obs,obs,targetinfo,acond,vsbs):
 
     verbose = False
     #   ================== ra distribution weights ====================
-    wra = weight_ra(targetinfo=targetinfo, tot_time=obs.tot_time[i_obs], obs_time=obs.obs_time[i_obs])
-    if verbose: print('wra (ra distribution weight)',wra)
-
-    # ttime = np.round((obs.tot_time[i_obs] - obs.obs_time[i_obs]) * 10) / 10  # remaining time in observations
-    prstatus = getprstatus(prog_ref=obs.prog_ref[i_obs],obs_time=obs.obs_time[i_obs])
-    if verbose: print('prstatus (program status [started=True])', prstatus)
 
     sbcond = Parallel(n_jobs=10)(delayed(vsb_to_sbcond)(vsb=vsbs[i]) for i in range(len(i_obs)))
 

@@ -17,7 +17,7 @@ def amplot(plan,targetinfo,timeinfo,mooninfo):
         if i_obs>0:
             jstart = plan.i_start[i] # observation start time index
             jend = plan.i_end[i] + 1 # observation end time index
-            plt.plot_date(timeinfo.utc[jstart:jend+1].plot_date,targetinfo[i_obs].AM[jstart:jend+1],linestyle='-',linewidth=thk,markersize=0,label=plan.obs_id[i][-10:])
+            plt.plot_date(timeinfo.utc[jstart:jend].plot_date,targetinfo[i_obs].AM[jstart:jend],linestyle='-',linewidth=thk,markersize=0,label=plan.obs_id[i][-10:])
 
     date = str(timeinfo.local[0].iso)[0:10]
     plt.title(date+' schedule')
@@ -29,6 +29,9 @@ def amplot(plan,targetinfo,timeinfo,mooninfo):
     plt.legend(loc=8,ncol=4,fontsize=8,markerscale=0.5)
     plt.tight_layout()
     plt.savefig('amplot'+date+'.png')
+    plt.show(block=False)
+    input(' Press enter to close...')
+    plt.close()
     plt.clf()
 
     return

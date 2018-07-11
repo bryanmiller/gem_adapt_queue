@@ -1,10 +1,11 @@
-ttimer = True
+ttimer = False
 if ttimer: import time as t
 if ttimer: timer = t.time()
 
 # astroconda packages
 import os
 import re
+import copy
 import random
 import textwrap
 import argparse
@@ -19,26 +20,22 @@ from astroplan import (download_IERS_A, Observer)
 import logger
 import select_obs
 from sb import sb
+import weightplotmode
 from gcirc import gcirc
 from amplot import amplot
 from condgen import condgen
-from calc_weight import calc_weight
 from printplan import printPlanTable
 from gemini_schedulers import PlanInfo
 from timing_windows import timingwindows
 from conversions import actual_conditions
 from gemini_instruments import getinstruments
 from gemini_observations import Gobservations, Gcatfile
+from calc_weight import (calc_weight, weight_ra, getprstatus)
 from gemini_classes import (TimeInfo, SunInfo, MoonInfo, TargetInfo)
 
 if ttimer: print('\n\tTimer imports = ', t.time() - timer)
 
 #   ======================================= Read and command line inputs ===============================================
-
-verbose = False
-
-aprint = '\t{0:<35s}{1}'  # print two strings
-bprint = '\t{0:<35s}{1:<.4f}'  # print string and number
 
 parser = argparse.ArgumentParser(prog='gqpt.py',
                                      formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -88,6 +85,10 @@ parser.add_argument(action='store',
 parser.add_argument(action='store',
                     dest='instcal')
 
+parser.add_argument('-l','--logfile',
+                    action='store',
+                    default=None)
+
 parser.add_argument('-o','--observatory',
                     action='store',
                     default='gemini_south')
@@ -105,13 +106,13 @@ parser.add_argument('-dst','--daylightsavings',
                     dest='dst',
                     default=False)
 
-parser.add_argument('-i', '--iq',
+parser.add_argument('-iq', '--iq',
                     default='70')
 
-parser.add_argument('-c', '--cc',
+parser.add_argument('-cc', '--cc',
                     default='50')
 
-parser.add_argument('-w', '--wv',
+parser.add_argument('-wv', '--wv',
                     default='Any')
 
 parser.add_argument('-d', '--distribution',
@@ -125,7 +126,7 @@ parser.add_argument('-a', '--amplots',
                     action='store_true',
                     default=False)
 
-parser.add_argument('-wp','--weightplot',
+parser.add_argument('-w','--weightplot',
                     action='store_true',
                     default=False)
 
@@ -136,6 +137,7 @@ parser.add_argument('-u', '--update',
 parse = parser.parse_args()
 otfile = parse.otfile
 instfile = parse.instcal
+logfilename = parse.logfile
 site_name = parse.observatory
 startdate = parse.startdate
 enddate = parse.enddate
@@ -147,7 +149,7 @@ cctemp = parse.cc
 wvtemp = parse.wv
 planbuildplot = parse.buildplots
 amplots = parse.amplots
-weightplotmode = parse.weightplot
+weightplots = parse.weightplot
 
 if update:  # download most recent International Earth Rotation and Reference Systems data
     download_IERS_A()
@@ -276,7 +278,7 @@ def gettimeinfo(site, utc_night_starts):
         MoonInfo objects containing time dependent Moon data for each night
     """
 
-    ttimer = True
+    ttimer = False
     if ttimer:
         import time as t
         timer = t.time()
@@ -466,8 +468,21 @@ if ttimer: timer = t.time()
 timeinfo, suninfo, mooninfo = gettimeinfo(site=site, utc_night_starts=utc_starts)
 if ttimer: print('\n\tTimer gettimeinfo = ', t.time() - timer)
 
+verbose = False
+customfilename = False
 while True:
+
+    if customfilename:
+        pass
+    elif logfilename is not None:
+        statfilename = logfilename
+    else:
+        statfilename = 'logfile' + time.Time.now().isot[:-4] + '.log'
+
     seed = random.seed(1000)
+
+    aprint = '\t{0:<35s}{1}'  # print two strings
+    bprint = '\t{0:<35s}{1:<.4f}'  # print string and number
 
     print('\n' + aprint.format('Site: ', site.name))
     print(bprint.format('Height: ', site.location.height))
@@ -483,6 +498,7 @@ while True:
     print(bprint.format('Julian year (UTC): ', utc_starts[0].jyear))
     print(aprint.format('Number of nights: ', n_nights))
 
+    # ================================================ Menu ============================================================
     while True:
 
         fsel = '\t{0:10s}{1:40s}{2:40}'
@@ -490,13 +506,26 @@ while True:
         print('\t---------------------------------------------------------------------')
         print(fsel.format('1.', 'Catalog file', otfile))
         print(fsel.format('2.', 'Inst. calendar file', instfile))
-        print(fsel.format('3.', 'Conditions (iq,cc,wv)', '('+iq+', '+cc+', '+wv+')'))
-        print(fsel.format('4.', 'Condition generator distribution', str(distribution)))
-        print(fsel.format('5.', 'Provide plan buildup plots', str(planbuildplot)))
+        print(fsel.format('3.', 'Log file', statfilename))
+        print(fsel.format('4.', 'Conditions (iq,cc,wv)', '('+iq+', '+cc+', '+wv+')'))
+        print(fsel.format('5.', 'Condition generator distribution', str(distribution)))
+        print(fsel.format('6.', 'Create airmass plots', str(amplots)))
+        print(fsel.format('7.', 'Create airmass buildup plots', str(planbuildplot)))
+        print(fsel.format('8.', 'Weighting function plot mode', str(weightplots)))
+        print()
+        print(fsel.format('dir', 'Show files in current directory', ''))
 
         userinput = input('\n Press enter to run or select number to make changes: ')
         if userinput == '':
             break
+
+        elif userinput == 'dir':
+            files = [f for f in os.listdir('.') if os.path.isfile(f)]
+            files.sort()
+            print('\n Current directory:\n -----------------')
+            for file in files:
+                print(' ' + file)
+
         elif userinput == '1':
             tempotfile = input(' Input OT catalog file name: ')
             if tempotfile=='':
@@ -512,6 +541,7 @@ while True:
                     for file in files: print(' '+file)
                     print('\n File \''+tempotfile+'\' not found in current directory.')
                     continue
+
         elif userinput == '2':
             tempinstfile = input(' Input instrument calendar file name: ')
             if tempinstfile == '':
@@ -520,14 +550,32 @@ while True:
             else:
                 files = [f for f in os.listdir('.') if os.path.isfile(f)]
                 if tempinstfile in files:
-                    instcal = Instruments(tempinstfile)
+                    instcal = getinstruments(tempinstfile)
                     instfile = tempinstfile
                 else:
-                    print('\n Current directory:\n -----------------')
-                    for file in files: print(' ' + file)
                     print('\n File \'' + tempinstfile + '\' not found in current directory.')
                     continue
+
         elif userinput == '3':
+            tempstatfile = input(' Choose log file name: ')
+            if tempstatfile == '':
+                print(' No input received. Changes not made.')
+                continue
+            else:
+                files = [f for f in os.listdir('.') if os.path.isfile(f)]
+                if tempstatfile in files:
+                    userinput = input(' ' + tempstatfile + ' already exists. Overwrite? [y/n] ')
+                    if userinput.lower() == 'y' or userinput == '':
+                        statfilename = tempstatfile
+                        continue
+                    else:
+                        print(' Changes not made.')
+                        continue
+                else:
+                    statfilename = tempstatfile
+                    continue
+
+        elif userinput == '4':
             condinput = input(' Input iq, cc, wv  percentiles separated by spaces (eg. \'20 50 Any\'): ')
             tempconds = condinput.split(' ')
             if len(tempconds)!=3:
@@ -539,7 +587,8 @@ while True:
                 except ValueError:
                     print(' ValueError! Could not set new conditions. Changes not made.')
                     continue
-        elif userinput == '4':
+
+        elif userinput == '5':
             tempdist = input(' Input condition generator distribution type (or \'None\'): ')
             if tempdist=='':
                 print(' No input received. Changes not made.')
@@ -549,6 +598,34 @@ while True:
                     cond_func, distribution = setconddist(tempdist)
                 except ValueError:
                     continue
+
+        elif userinput == '6':
+            if amplots == True:
+                amplots = False
+                print(' Turned off airmass plots.')
+                continue
+            elif amplots == False:
+                amplots = True
+                print(' Turned on airmass plots.')
+
+        elif userinput == '7':
+            if planbuildplot == True:
+                planbuildplot = False
+                print(' Turned off airmass build-up plots.')
+                continue
+            if planbuildplot == False:
+                planbuildplot = True
+                print(' Turned on airmass build-up plots.')
+
+        elif userinput == '8':
+            if weightplots == True:
+                weightplots = False
+                print(' Turned off weight function plotting mode.')
+                continue
+            if weightplots == False:
+                weightplots = True
+                print(' Turned on weight function plotting mode.')
+
         else:
             print(' Did not recognize input. Changes not made.')
             continue
@@ -556,12 +633,12 @@ while True:
     # ========================================= Reload packages ========================================================
     if ttimer: timer = t.time()
     importlib.reload(select_obs)
+    importlib.reload(weightplotmode)
     if ttimer: print('\n\tTimer packages = ', t.time() - timer)
 
     # ============================= Retrieve observation and instrument information ====================================
     if ttimer: timer = t.time()
     obs, n_obs = getobservations(otfile)
-    i_obs = np.arange(n_obs)
     if ttimer: print('\n\tTimer getobservations = ', t.time() - timer)
 
     if ttimer: timer = t.time()
@@ -571,16 +648,13 @@ while True:
     # ==================================== Initialize statistics logfile ===============================================
     semesterstats = {'night_time': 0. * u.h, 'used_time': 0. * u.h}
 
-    statfilename = 'logfile'+current_local.isot[:-5]+'.log'
-    statfilename = 'testlogfile.log'
-
     logger.initLogFile(filename=statfilename, catalogfile=otfile, site=site,
                        start=local_start, n_nights=n_nights, dst=daylightsavings)
 
     logger.logProgStats(filename=statfilename, obs=obs, semesterinfo=semesterstats,
                         description='Initial completion status...')
 
-    print('\n\tOuput file: '+statfilename)
+    print('\n\tOutput log file: '+statfilename)
 
     # ========================================== Timing windows ========================================================
     if ttimer: timer = t.time()
@@ -624,7 +698,15 @@ while True:
         if ttimer: print('\n\tTimer actual_conditions = ', t.time() - timer)
         print('\n\tSky conditions (iq,cc,wv): {0} , {1} , {2}'.format(acond[0], acond[1], acond[3]))
 
+        # ====================== Get weighting factor for RA distribution of observation hours =========================
+        if ttimer: timer = t.time()
+        wra = weight_ra(ras=obs.ra, tot_time=obs.tot_time, obs_time=obs.obs_time)
+        if verbose: print('wra (ra distribution weight)', wra)
+        if ttimer: print('\n\tTimer weight_ra = ', t.time() - timer)
+
         # =============================== Select schedule candidates from queue ========================================
+        i_obs = np.arange(n_obs)
+
         if ttimer: timer = t.time()
         try:
             i_obs = i_obs[select_obs.selectinst(i_obs=i_obs, obs=obs, instcal=instcal, datestring=date)]
@@ -666,29 +748,43 @@ while True:
         if ttimer: print('\n\tTimer sb = ', t.time() - timer)
 
         if ttimer: timer = t.time()
-        weightinfo = calc_weight(site=site, i_obs=i_obs, obs=obs, targetinfo=targetinfo, acond=acond, vsbs=vsbs)
+        # ttime = np.round((obs.tot_time[i_obs] - obs.obs_time[i_obs]) * 10) / 10  # remaining time in observations
+        prstatus = getprstatus(prog_ref=obs.prog_ref[i_obs], obs_time=obs.obs_time[i_obs])
+        if ttimer: print('\n\tTimer prstatus = ', t.time() - timer)
+
+        if ttimer: timer = t.time()
+        weightinfo = calc_weight(site=site, i_obs=i_obs, obs=obs, targetinfo=targetinfo, acond=acond, vsbs=vsbs,
+                                 wra=wra, prstatus=prstatus)
         if ttimer: print('\n\tTimer calc_weight = ', t.time() - timer)
 
         if ttimer: timer = t.time()
         # generate PlanInfo plan object and update Gobservation object
-        plan, obs = PlanInfo.priority(i_obs=i_obs ,obs=obs, timeinfo=timeinfo[i_day], targetinfo=targetinfo)
+        plan, obs_updated = PlanInfo.priority(i_obs=i_obs ,obs=copy.deepcopy(obs), timeinfo=timeinfo[i_day], targetinfo=targetinfo, showbuildup=planbuildplot)
         if ttimer: print('\n\tTimer PlanInfo = ', t.time() - timer)
 
         if ttimer: timer = t.time()
         # print plan
-        [print(line) for line in printPlanTable(plan=plan, i_obs=i_obs, obs=obs, timeinfo=timeinfo[i_day], targetinfo=targetinfo)]
+        [print(line) for line in printPlanTable(plan=plan, i_obs=i_obs, obs=obs_updated, timeinfo=timeinfo[i_day], targetinfo=targetinfo)]
         if ttimer: print('\n\tTimer printPlanTable = ', t.time() - timer)
 
-        logger.logPlanStats(filename=statfilename, i_obs=i_obs, obs=obs, plan=plan, timeinfo=timeinfo[i_day], suninfo=suninfo[i_day],
+        logger.logPlanStats(filename=statfilename, i_obs=i_obs, obs=obs_updated, plan=plan, timeinfo=timeinfo[i_day], suninfo=suninfo[i_day],
                         mooninfo=mooninfo[i_day], targetinfo=targetinfo, acond=acond)
         if ttimer: print('\n\tTimer logPlanStats = ', t.time() - timer)
 
         semesterstats['night_time'] = semesterstats['night_time'] + plan.night_length
         semesterstats['used_time'] = semesterstats['used_time'] + plan.used_time
 
-        if ttimer: timer = t.time()
-        amplot(plan=plan, timeinfo=timeinfo[i_day], mooninfo=mooninfo[i_day], targetinfo=targetinfo) # airmass plot to png file
-        if ttimer: print('\n\tTimer amplot = ', t.time() - timer)
+        if amplots:
+            if ttimer: timer = t.time()
+            amplot(plan=plan, timeinfo=timeinfo[i_day], mooninfo=mooninfo[i_day], targetinfo=targetinfo)
+            if ttimer: print('\n\tTimer amplot = ', t.time() - timer)
+
+        if weightplots:
+            weightplotmode.weightplotmode(site=site, timeinfo=timeinfo[i_day], suninfo=suninfo[i_day],
+                                          mooninfo=mooninfo[i_day], targetinfo=targetinfo, obs=obs, i_obs=i_obs,
+                                          plan=plan, acond=acond)
+
+        obs=obs_updated  # updated obs structure
 
     logger.logProgStats(filename=statfilename, obs=obs, semesterinfo=semesterstats, description='Schedule results...')
 
