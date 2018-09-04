@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # -- astroconda modules --
 import argparse
 from astroplan import download_IERS_A
@@ -523,6 +525,7 @@ while True:
         print(fprint.format('15.', 'Show wind condition plots', str(showwindplots)))
         print()
         print(fprint.format('dir', 'Show files in current directory', ''))
+        print(fprint.format('x,q', 'Exit', ''))
 
         userinput = input('\n Press enter to run or select an option: ')
         if userinput == '':
@@ -534,6 +537,9 @@ while True:
                 if userinput == '':
                     break
 
+                elif userinput.lower() == 'x' or userinput.lower() == 'q':
+                	exit()
+                	
                 elif userinput == 'dir':  # show files in curent directory
                     files = [f for f in os.listdir('.') if os.path.isfile(f)]
                     files.sort()
