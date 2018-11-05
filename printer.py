@@ -122,9 +122,9 @@ def plantable(plan, obs, targets, timetable, description=''):
 
     lines = ['', '', '{:>60s}'.format(str('-- ' + timetable['date'][0] + ' schedule '+description+'--')), '',
              str(sprint.format('Obs. ID', 'Target', 'RA', 'Dec.', 'Instr.', 'UTC', 'LST', 'Start', 'End', 'Dur.', 'AM',
-                               'HA', 'Completed')),
+                               'HA', 'Complete')),
              str(sprint.format('-------', '------', '--', '---', '-----', '---', '---', '-----', '---', '---', '--',
-                               '--', '---------')),
+                               '--', '--------')),
              str(sprint.format('12 deg.twi.', '', '', '', '', timetable['utc'][0][0].iso[11:16],
                                str('{:.2f}'.format(timetable['lst'][0][0])), timetable['local'][0][0].iso[11:16],
                                '', '', '', '', ''))]
