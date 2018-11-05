@@ -5,7 +5,7 @@ import numpy as np
 from astropy.table import Table
 
 
-def catalog_table(otfile):
+def catalog_table(otfile, verbose = False):
     """
     Read OT browser catalog file and return columns in '~astropy.table' object.
     Numbers are appended to the end of repeated column names.
@@ -20,16 +20,40 @@ def catalog_table(otfile):
     -------
     '~astropy.table'
     """
-    verbose = False
 
-    cattext = []
-    with open(otfile, 'r') as readcattext:  # read file into memory.
+#    import sys  
+#
+#    reload(sys)  
+#    sys.setdefaultencoding('utf8')
+
+#    encoding=utf8
+
+    # cattext = []
+    rows = np.array([])
+    with open(otfile, 'r', encoding="utf-8") as readcattext:  # read file into memory.
         # [print(line.split('\t')) for line in readcattext]
-        [cattext.append(line.split('\t')) for line in readcattext]  # Split lines where tabs ('\t') are found.
+        # [cattext.append(line.split('\t')) for line in readcattext]  # Split fields where tabs ('\t') are found.
+        nline = 0
+        for line in readcattext:
+            nline += 1
+            values = line.rstrip("\n").split('\t')
+            # Don't includes invalid lines, e.g. obs with no targets have ra=null, no Acq
+            if nline > 10 and values[5] != 'null' and 'Acquisition' not in values[15]:
+                # In case no charged time
+                if values[14] == '':
+                    values[14] = '00:00:00'
+                if rows.size > 0:
+                    rows = np.vstack([rows,values])
+                else:
+                    rows = np.array(values)
+            elif nline == 9:
+                colnames = np.array(values)
         readcattext.close()
 
-    colnames = np.array(cattext[8])
-    rows = np.array(cattext[10:])
+    # colnames = np.array(cattext[8])
+    # rows = np.array(cattext[10:])
+    # print(colnames)
+    # print(rows.shape)
 
     if verbose:
         print('\notcat attribute names...', colnames)
@@ -37,7 +61,7 @@ def catalog_table(otfile):
     existing_names = []
     for i in range(0, len(colnames)):
 
-        # remove special charaters, trim ends of string, replace whitespace with underscore
+        # remove special characters, trim ends of string, replace whitespace with underscore
         string = colnames[i].replace('.', '')
         string = re.sub(r'\W', ' ', string)
         string = string.strip()
@@ -71,6 +95,8 @@ def catalog_table(otfile):
             print(string)
 
     cattable = Table()
+
+    # print(len(existing_names))
     for i in range(len(existing_names)):
         if verbose:
             print(existing_names[i], rows[:, i])
@@ -78,5 +104,6 @@ def catalog_table(otfile):
 
     if verbose:
         print('\nFound '+str(len(rows))+' observations in '+str(otfile))
+        print(cattable)
 
     return cattable

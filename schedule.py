@@ -8,7 +8,7 @@ from dt import deltat
 from intervals import intervals
 
 
-def priority(plan, obs, targets, dt):
+def priority(plan, obs, targets, dt, verbose = False):
     """
     Add an observation to the current plan using the priority scheduling algorithm.
     Return the current plan if no observations can be added.
@@ -36,7 +36,6 @@ def priority(plan, obs, targets, dt):
         new plan
     """
 
-    verbose = False
     verbose_add_to_plan = False  # print only the final results of the algorithm
 
     # -- Add an observation to the plan --

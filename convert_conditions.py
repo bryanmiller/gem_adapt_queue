@@ -60,22 +60,22 @@ def convertcond(iq, cc, bg, wv):
         raise ValueError(errormessage)
 
     if isinstance(cc, np.ndarray):
-        cc = np.array(list(map(conviq, cc)))
-    elif isinstance(cc, str) or isinstance(iq, float):
+        cc = np.array(list(map(convcc, cc)))
+    elif isinstance(cc, str) or isinstance(cc, float):
         cc = convcc(cc)
     else:
         raise ValueError(errormessage)
 
     if isinstance(bg, np.ndarray):
-        bg = np.array(list(map(conviq, bg)))
-    elif isinstance(bg, str) or isinstance(iq, float):
+        bg = np.array(list(map(convbg, bg)))
+    elif isinstance(bg, str) or isinstance(bg, float):
         bg = convbg(bg)
     else:
         raise ValueError(errormessage)
 
     if isinstance(wv, np.ndarray):
-        wv = np.array(list(map(conviq, wv)))
-    elif isinstance(wv, str) or isinstance(iq, float):
+        wv = np.array(list(map(convwv, wv)))
+    elif isinstance(wv, str) or isinstance(wv, float):
         wv = convwv(wv)
     else:
         raise ValueError(errormessage)
@@ -100,9 +100,9 @@ def conviq(string):
         iq = float(re.findall(r'[\d\.\d]+', string)[0])/100
         if iq <= 0.2:
             iq = 0.2
-        elif 0.2 < iq <= 0.5:
-            iq = 0.5
-        elif 0.5 < iq <= 0.7:
+#        elif 0.2 < iq <= 0.5:
+#            iq = 0.5
+        elif 0.2 < iq <= 0.7:
             iq = 0.7
         elif 0.7 < iq <= 0.85:
             iq = 0.85
@@ -119,14 +119,14 @@ def convcc(string):
         cc = 1.
     else:
         cc = float(re.findall(r'[\d\.\d]+',string)[0])/100
-        if cc <= 0.2:
-            cc = 0.2
-        elif 0.2 < cc <= 0.5:
+        if cc <= 0.5:
+#            cc = 0.2
+#        elif 0.2 < cc <= 0.5:
             cc = 0.5
         elif 0.5 < cc <= 0.7:
             cc = 0.7
-        elif 0.5 < cc <= 0.85:
-            cc = 0.85
+        elif 0.5 < cc <= 0.80:
+            cc = 0.80
         else:
             cc = 1.
     return cc
@@ -144,10 +144,10 @@ def convbg(string):
             bg = 0.2
         elif 0.2 < bg <= 0.5:
             bg = 0.5
-        elif 0.5 < bg <= 0.7:
-            bg = 0.7
-        elif 0.5 < bg <= 0.85:
-            bg = 0.85
+#        elif 0.5 < bg <= 0.7:
+#            bg = 0.7
+        elif 0.5 < bg <= 0.80:
+            bg = 0.80
         else:
             bg = 1.
     return bg
@@ -165,10 +165,10 @@ def convwv(string):
             wv = 0.2
         elif 0.2 < wv <= 0.5:
             wv = 0.5
-        elif 0.5 < wv <= 0.7:
-            wv = 0.7
-        elif 0.5 < wv <= 0.85:
-            wv = 0.85
+#        elif 0.5 < wv <= 0.7:
+#            wv = 0.7
+        elif 0.5 < wv <= 0.80:
+            wv = 0.80
         else:
             wv = 1.
     return wv

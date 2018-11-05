@@ -12,6 +12,26 @@ from astropy import coordinates
 #gemini packages
 from dt import deltat
 
+def shortid(obsid):
+    """
+    Compact format for the observation id, like QPT
+
+    Parameters
+    ----------
+    obsid : string
+        Program id string
+
+    Returns
+    -------
+    shortid : string
+        Compact format
+    """
+
+    idvals = obsid.split('-')
+
+    shortid = idvals[0][-1] + idvals[1][2:] + '-' + idvals[2] + '-' + idvals[3] + '[' + idvals[4] + ']'
+
+    return shortid
 
 def _get_order(plan):
     """
@@ -97,7 +117,7 @@ def plantable(plan, obs, targets, timetable, description=''):
         print('i_start', i_start)
         print('i_end', i_end)
 
-    sprint = '{0:14.12s}{1:12.10s}{2:7.5s}{3:7.5s}{4:7.5s}{5:7.5s}{6:7.5s}{7:7.5s}{8:7.5s}{9:7.5s}{10:6.4s}' \
+    sprint = '{0:17.15s}{1:12.10s}{2:7.5s}{3:7.5s}{4:7.5s}{5:7.5s}{6:7.5s}{7:7.5s}{8:7.5s}{9:7.5s}{10:6.4s}' \
              '{11:7.5s}{12:10.10}'
 
     lines = ['', '', '{:>60s}'.format(str('-- ' + timetable['date'][0] + ' schedule '+description+'--')), '',
@@ -113,7 +133,7 @@ def plantable(plan, obs, targets, timetable, description=''):
         if obs_order[i] >= 0:
 
             if verbose:
-                print(targets['id'][obs_order[i]][-10:])
+                print(shortid(targets['id'][obs_order[i]]))
                 print(obs['target'][obs_order[i]])
                 print(obs['inst'][obs_order[i]])
                 print(timetable['utc'][0][i_start[i]][11:16])
@@ -126,7 +146,7 @@ def plantable(plan, obs, targets, timetable, description=''):
                 print(str('{:.2f}'.format(targets['HA'][obs_order[i]][i_start[i]])))
                 print(str(obs['obs_comp'][obs_order[i]] >= 1.))
 
-            obs_name = targets['id'][obs_order[i]][-10:]
+            obs_name = shortid(targets['id'][obs_order[i]])
             ra = obs['ra'].quantity[obs_order[i]].round(2)
             dec = obs['dec'].quantity[obs_order[i]].round(2)
             targ_name = obs['target'][obs_order[i]]

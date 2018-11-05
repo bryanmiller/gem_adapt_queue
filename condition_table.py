@@ -76,16 +76,16 @@ def condition_table(size, iq, cc, wv, conddist=None):
         variantnum = np.random.randint(4) + 1
         if variantnum == 1:
             iq = '20%'
-            cc = '20%'
-            wv = '20%'
+            cc = '50%'
+            wv = '50%'
         elif variantnum == 2:
             iq = '70%'
-            cc = '50%'
-            wv = 'Any'
+            cc = '70%'
+            wv = '80%'
         elif variantnum == 3:
-            iq = '50%'
-            cc = '20%'
-            wv = '50%'
+            iq = '85%'
+            cc = '70%'
+            wv = 'Any'
         else:
             iq = 'Any'
             cc = '70%'

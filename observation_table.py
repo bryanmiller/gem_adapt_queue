@@ -23,7 +23,7 @@ def fixcondstring(string):
         return string
 
 
-def observation_table(filename):
+def observation_table(filename, verbose = False):
     """
     Store gemini observation information in '~astropy.table.Table' object.
     Converts some variable types, performs merging of columns.
@@ -76,14 +76,14 @@ def observation_table(filename):
     # Read OBD ascii catalog file columns into an 'astropy.table.Table' structure.
     # This module will also need to be replaced or changed if attempting to use a observation data format or a
     # different file format.
-    cattable = catalog_table(filename)
+    cattable = catalog_table(filename, verbose=verbose)
 
     # Select observations from catalog to add to queue
-    # i_obs = selectqueue(cattable=cattable)
+    i_obs = selectqueue(cattable=cattable)
 
     # for now, take all observations from catalog table.
     # A method for selecting only 'ready' observations could be included here.
-    i_obs = np.arange(len(cattable))
+    # i_obs = np.arange(len(cattable))
 
     n_obs = len(i_obs)  # number of observations
     obstable = Table()  # initialize table
@@ -100,7 +100,7 @@ def observation_table(filename):
 
     # ------ Get current epoch coordinates ------
     epoch = Time.now()
-    coord_j2000 = SkyCoord(cattable['ra'], cattable['dec'], frame='icrs', unit=(u.deg, u.deg))
+    coord_j2000 = SkyCoord(cattable['ra'][i_obs], cattable['dec'][i_obs], frame='icrs', unit=(u.deg, u.deg))
     current_epoch = coord_j2000.transform_to(FK5(equinox='J' + str(epoch.jyear)))
     obstable['ra'] = Column(current_epoch.ra.value, unit='deg')
     obstable['dec'] = Column(current_epoch.dec.value, unit='deg')
@@ -143,14 +143,25 @@ def observation_table(filename):
     obstable['disperser'] = cattable['disperser_2'][i_obs]
     obstable['filter'] = cattable['filter_2'][i_obs]
     obstable['fpu'] = cattable['fpu'][i_obs]
+    obstable['custom_mask_mdf'] = cattable['custom_mask_mdf'][i_obs]
 
     f2_fpu = cattable['focal_plane_unit'][i_obs]
     crwlen = cattable['central_wavelength'][i_obs]
     bh_xbin = cattable['ccd_x_binning'][i_obs]
     bh_ybin = cattable['ccd_y_binning'][i_obs]
     mask = cattable['mask'][i_obs]
+    # fpu = cattable['fpu'][i_obs]
+    # custom_mask = cattable['custom_mask_mdf'][i_obs]
 
     # ------ Combine columns ------
+
+    # Put custom mask (MOS MDF) names into fpu field, in Nov 2018 this only works for GMOS
+    # print(instcal['gmos_fpu'])
+    # if 'Custom Mask' not in instcal['gmos_fpu'].data[0]:
+    #     ii = np.where(fpu == 'Custom Mask')[0][:]
+    #     if len(ii) != 0:
+    #         obstable['fpu'][ii] = custom_mask[ii]
+
     ii = np.where(f2_fpu != 'null')[0][:]
     if len(ii) != 0:
         obstable['fpu'][ii] = f2_fpu[ii]
@@ -179,11 +190,13 @@ def observation_table(filename):
     obs_comp = []
     tot_time = []
     obs_time = []
+    # Some charged time fields can be empty
     ii = np.where(cattable['charged_time'][i_obs] == '')[0][:]
     if len(ii) != 0:
         cattable['charged_time'][i_obs][ii] = '00:00:00'
     for i in range(0, n_obs):
         charged = hms_to_hr(cattable['charged_time'][i_obs][i])
+        # print(i, cattable['obs_id'][i_obs][i], cattable['charged_time'][i_obs][i], cattable['planned_exec_time'][i_obs][i])
         total = hms_to_hr(cattable['planned_exec_time'][i_obs][i])
         if charged > 0.:  # add additional time
             if 'Mirror' in obstable['disperser'][i]:

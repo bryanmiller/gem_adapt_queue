@@ -6,7 +6,7 @@ import numpy as np
 import astropy.units as u
 
 
-def radist(ra, tot_time, obs_time):
+def radist(ra, tot_time, obs_time, verbose = True):
     """
     Compute weighting factors for RA distribution of total remaining observation time.
     Observations are binned using 30 degree regions around the celestial sphere.
@@ -26,7 +26,6 @@ def radist(ra, tot_time, obs_time):
     -------
     array of floats
     """
-    verbose = False
 
     bin_edges = [0., 30., 60., 90., 120., 150., 180., 210., 240., 270., 300., 330., 360.] * u.deg
 
@@ -64,7 +63,7 @@ def radist(ra, tot_time, obs_time):
     return wra
 
 
-def cond_match(iq, cc, bg, wv, skyiq, skycc, skywv, skybg, negha):
+def cond_match(iq, cc, bg, wv, skyiq, skycc, skywv, skybg, negha, verbose = True):
     """
     Match condition constraints to actual conditions:
         - Set cmatch to zero for times where the required conditions
@@ -112,8 +111,6 @@ def cond_match(iq, cc, bg, wv, skyiq, skycc, skywv, skybg, negha):
         cmatch weights
     """
 
-    verbose = False
-
     cmatch = np.ones(len(skybg))
 
     # Where actual conditions worse than requirements
@@ -141,13 +138,13 @@ def cond_match(iq, cc, bg, wv, skyiq, skycc, skywv, skybg, negha):
     if verbose:
         print(iq, cc, bg, wv)
         print(skyiq, skycc, skybg, skywv)
-        print('iq worse than required', bad_iq)
-        print('cc worse than required', bad_cc)
-        print('bg worse than required', bad_bg)
-        print('wv worse than required', bad_wv)
-        print('i_bad_cond', i_bad_cond)
-        print('iq better than required', i_better_iq)
-        print('cc better than required', i_better_cc)
+      #  print('iq worse than required', bad_iq)
+      #  print('cc worse than required', bad_cc)
+      #  print('bg worse than required', bad_bg)
+      #  print('wv worse than required', bad_wv)
+      #  print('i_bad_cond', i_bad_cond)
+      #  print('iq better than required', i_better_iq)
+      #  print('cc better than required', i_better_cc)
 
     return cmatch
 
@@ -204,7 +201,7 @@ def airmass(am, ha, elev):
     """
 
     wam = np.ones(len(am))
-    i_bad_AM = np.where(am > 2.)[0][:]
+    i_bad_AM = np.where(am > 2.1)[0][:]
     wam[i_bad_AM] = 0.
 
     if elev['type'] == 'Airmass':
@@ -217,7 +214,7 @@ def airmass(am, ha, elev):
     return wam
 
 
-def windconditions(dir, vel, az):
+def windconditions(dir, vel, az, verbose = False):
     """
     Wind condition weights:
         - 0. if wind speed is greater than 10km/h
@@ -239,7 +236,6 @@ def windconditions(dir, vel, az):
     wwind : array of floats
         wind condition weights
     """
-    verbose = False
 
     wwind = np.ones(len(az))
     ii = np.where(np.logical_and(vel > 10.*u.km/u.h, abs(dir - az) < 20.*u.deg))[0][:]
@@ -256,7 +252,7 @@ def windconditions(dir, vel, az):
     return wwind
 
 
-def hourangle(latitude, dec, ha):
+def hourangle(latitude, dec, ha, verbose = False):
     """
     Compute a weight representing the target location and visibility window.
 
@@ -276,7 +272,6 @@ def hourangle(latitude, dec, ha):
     wha : float array
         hourangle weights
     """
-    verbose = False
 
     if latitude < 0:
         decdiff = latitude - dec
@@ -309,7 +304,8 @@ def hourangle(latitude, dec, ha):
         print('lat', latitude)
         print('decdiff', decdiff)
         print('HA/unit^2', ha / (u.hourangle ** 2))
-        print('min HA', np.amin(ha).hour)
+      #  print('min HA', np.amin(ha).hour)
+        print('min HA', np.amin(ha))
 
     return wha
 
@@ -402,7 +398,7 @@ def complete(prog_comp, obs_comp):
         return 1
 
 
-def time_wins(grid_size, i_wins):
+def time_wins(grid_size, i_wins, verbose = False):
     """
     Set weights to 0 if they are not within the observation time windows.
 
@@ -428,7 +424,6 @@ def time_wins(grid_size, i_wins):
         new observation weights along time grid.
 
     """
-    verbose = False
 
     if verbose:
         print('i_wins:')
@@ -448,7 +443,7 @@ def time_wins(grid_size, i_wins):
 
 
 def obsweight(obs_id, ra, dec, iq, cc, bg, wv, elev_const, i_wins, band, user_prior, AM, HA, AZ, latitude, prog_comp,
-              obs_comp, skyiq, skycc, skybg, skywv, winddir, windvel, wra):
+              obs_comp, skyiq, skycc, skybg, skywv, winddir, windvel, wra,  verbose = True, debug = False):
     """
     Calculate observation weights.
 
@@ -543,9 +538,7 @@ def obsweight(obs_id, ra, dec, iq, cc, bg, wv, elev_const, i_wins, band, user_pr
     -------
     weights : np.ndarray of floats
     """
-
-    verbose = False
-    verbose2 = False  # only show obs. info and final weight
+    verbose2 = debug  # only show obs. info and final weight
 
     if verbose or verbose2:
         print(obs_id, ra, dec, iq, cc, bg, wv, elev_const, band, user_prior, obs_comp)
@@ -557,7 +550,7 @@ def obsweight(obs_id, ra, dec, iq, cc, bg, wv, elev_const, i_wins, band, user_pr
 
     # -- Matching required conditions to actual --
     cmatch = cond_match(iq=iq, cc=cc, bg=bg, wv=wv, skyiq=skyiq, skycc=skycc, skywv=skywv, skybg=skybg,
-                        negha=min(HA) < 0. * u.hourangle)
+                        negha=min(HA) < 0. * u.hourangle, verbose = verbose)
     if verbose:
         print('iq, cc, bg, wv', iq, cc, bg, wv)
         print('skyiq, skycc, skybg, skywv', skyiq, skycc, skybg, skywv)
@@ -579,12 +572,12 @@ def obsweight(obs_id, ra, dec, iq, cc, bg, wv, elev_const, i_wins, band, user_pr
 
     # -- Wind --
     # Wind, do not point within 20deg of wind if over limit
-    wwind = windconditions(dir=winddir, vel=windvel, az=AZ)
+    wwind = windconditions(dir=winddir, vel=windvel, az=AZ, verbose=verbose)
     if verbose:
         print('wwind', wwind)
 
     # -- Hour Angle / Location  --
-    wha = hourangle(latitude=latitude, dec=dec, ha=HA)
+    wha = hourangle(latitude=latitude, dec=dec, ha=HA, verbose=verbose)
     if verbose:
         print('wha', wha)
 

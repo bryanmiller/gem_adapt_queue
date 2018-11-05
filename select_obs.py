@@ -60,7 +60,7 @@ def _checkinst(inst, disp, fpu, insttable):
             return True
 
 
-def i_progs(gemprgid, prog_ref):
+def i_progs(gemprgid, prog_ref, verbose = False):
     """
     Match program identifier strings in prog_ref to strings in gemprgid.
     Return array of indices.
@@ -80,8 +80,6 @@ def i_progs(gemprgid, prog_ref):
 
     """
 
-    verbose = False
-
     i_progs = np.full(len(prog_ref), -1)
     prog_refs = np.unique(prog_ref)
 
@@ -89,6 +87,7 @@ def i_progs(gemprgid, prog_ref):
         print(prog_refs)
 
     for prog in prog_refs:
+        # print (prog, np.where(gemprgid == prog)[0])
         j = np.where(gemprgid == prog)[0][0]  # should only have one value in array
         jj = np.where(prog_ref == prog)[0][:]  # observations in queue from program 'prog'
         i_progs[jj] = j
@@ -98,7 +97,7 @@ def i_progs(gemprgid, prog_ref):
     return i_progs
 
 
-def instconfig(inst, disp, fpu, insttable, date):
+def instconfig(inst, disp, fpu, insttable, date, verbose = False):
 
     """
     Select observations to add to tonight's queue.
@@ -119,7 +118,6 @@ def instconfig(inst, disp, fpu, insttable, date):
     numpy integer array
         indices of observations selected for tonight's queue
     """
-    verbose = False
 
     i_cal = _getcalday(instcal=insttable, date=date)
     bools = [_checkinst(inst=inst[j], disp=disp[j], fpu=fpu[j], insttable=insttable[i_cal]) for j in range(len(inst))]
@@ -157,7 +155,9 @@ def selectqueue(cattable):
         indices of observations selected for queue
     """
     return np.where(np.logical_and(np.logical_or(cattable['obs_status'] == 'Ready', cattable['obs_status'] == 'Ongoing'),
-                                   np.logical_or(cattable['obs_class'] == 'Science',
-                                   np.logical_and(np.logical_or(cattable['inst'] == 'GMOS', cattable['inst'] == 'bHROS'),
-                                   np.logical_or(cattable['obs_class'] == 'Nighttime Partner Calibration',
-                                                 cattable['obs_class'] == 'Nighttime Program Calibration')))))[0][:]
+                                   cattable['obs_class'] == 'Science'))[0][:]
+
+    # np.logical_or(cattable['obs_class'] == 'Science',
+                                   # np.logical_and(np.logical_or(cattable['inst'] == 'GMOS', cattable['inst'] == 'bHROS'),
+                                   # np.logical_or(cattable['obs_class'] == 'Nighttime Partner Calibration',
+                                   #               cattable['obs_class'] == 'Nighttime Program Calibration')))))[0][:]

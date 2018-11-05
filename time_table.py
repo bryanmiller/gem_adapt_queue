@@ -2,6 +2,7 @@
 
 import numpy as np
 import astropy.units as u
+from multiprocessing import cpu_count
 from joblib import Parallel, delayed
 from astropy.table import Table, Column
 
@@ -127,22 +128,23 @@ def time_table(site, start, utc_to_local, dt=0.1*u.h, end=None):
 
     dates = Column([(evening+utc_to_local).iso[0:10] for evening in evenings], name='date')
 
-    solar_midnights = Column(Parallel(n_jobs=10)(delayed(solar_midnight)(site, evening)
+    ncpu = cpu_count()
+    solar_midnights = Column(Parallel(n_jobs=ncpu)(delayed(solar_midnight)(site, evening)
                                                  for evening in evenings), name='solar_midnight')
 
-    evening_twilights = Column(Parallel(n_jobs=10)(delayed(evening_twilight)(site, evening)
+    evening_twilights = Column(Parallel(n_jobs=ncpu)(delayed(evening_twilight)(site, evening)
                                                    for evening in evenings), name='twilight_evening')
 
-    morning_twilights = Column(Parallel(n_jobs=10)(delayed(morning_twilight)(site, evening)
+    morning_twilights = Column(Parallel(n_jobs=ncpu)(delayed(morning_twilight)(site, evening)
                                                    for evening in evenings), name='twilight_morning')
 
     utc_list = Parallel(n_jobs=10)(delayed(utc_times)(evening_twilights[i], morning_twilights[i], dt)
                                    for i in daynums)
 
-    local_arrays = Column(Parallel(n_jobs=10)(delayed(local_times)(utc_list[i], utc_to_local)
+    local_arrays = Column(Parallel(n_jobs=ncpu)(delayed(local_times)(utc_list[i], utc_to_local)
                                               for i in daynums), name='local')
 
-    lst_arrays = Column(np.array(Parallel(n_jobs=10)(delayed(lst_times)(utc_list[i], site)
+    lst_arrays = Column(np.array(Parallel(n_jobs=ncpu)(delayed(lst_times)(utc_list[i], site)
                                             for i in daynums)), name='lst', unit='hourangle')
 
     utc_arrays = Column([utc for utc in utc_list], name='utc')

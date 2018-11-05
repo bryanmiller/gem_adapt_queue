@@ -3,6 +3,7 @@
 import numpy as np
 import astropy.units as u
 from astropy.time import Time
+from multiprocessing import cpu_count
 from joblib import Parallel, delayed
 from astropy.table import Table, Column
 from astropy.coordinates import get_moon
@@ -114,21 +115,22 @@ def moon_table(site, solar_midnight, utc, lst):
     # rise = Column(Parallel(n_jobs=10)(delayed(get_moon_rise_time)
     #                                   (site, solar_midnight[i], horizon=sun_horiz) for i in i_day), name='rise')
 
-    fraction = Column(Parallel(n_jobs=10)(delayed(get_moon_fraction)(site, solar_midnight[i]) for i in i_day),
+    ncpu = cpu_count()
+    fraction = Column(Parallel(n_jobs=ncpu)(delayed(get_moon_fraction)(site, solar_midnight[i]) for i in i_day),
                       name='fraction')
 
-    phase = Column(Parallel(n_jobs=10)(delayed(get_moon_phase)(site, solar_midnight[i]) for i in i_day), name='phase',
+    phase = Column(Parallel(n_jobs=ncpu)(delayed(get_moon_phase)(site, solar_midnight[i]) for i in i_day), name='phase',
                    unit='rad')
 
-    moon_midnight = Parallel(n_jobs=10)(delayed(get_moon)(solar_midnight[i], location=site.location) for i in i_day)
+    moon_midnight = Parallel(n_jobs=ncpu)(delayed(get_moon)(solar_midnight[i], location=site.location) for i in i_day)
     ra_mid = Column([moon_midnight[i].ra.value for i in i_day], name='ra_mid', unit='deg')
     dec_mid = Column([moon_midnight[i].dec.value for i in i_day], name='dec_mid', unit='deg')
 
-    moon = Parallel(n_jobs=10)(delayed(get_moon)(Time(utc[i]), location=site.location) for i in i_day)
+    moon = Parallel(n_jobs=ncpu)(delayed(get_moon)(Time(utc[i]), location=site.location) for i in i_day)
     ra = Column([moon[i].ra.value for i in i_day], name='ra', unit='deg')
     dec = Column([moon[i].dec.value for i in i_day], name='dec', unit='deg')
 
-    ZDHAAZ = Parallel(n_jobs=10)(delayed(calc_zd_ha_az)(lst=lst[i]*u.hourangle, latitude=site.location.lat,
+    ZDHAAZ = Parallel(n_jobs=ncpu)(delayed(calc_zd_ha_az)(lst=lst[i]*u.hourangle, latitude=site.location.lat,
                                                         ra=moon[i].ra, dec=moon[i].dec) for i in i_day)
 
     ZD = Column([ZDHAAZ[i][0].value for i in i_day], name='ZD', unit='deg')

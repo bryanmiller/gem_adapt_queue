@@ -2,11 +2,11 @@ import numpy as np
 from astropy.table import Table
 
 
-def instrument_table(filename, dates):
+def instrument_table(filename, dates,  verbose = False):
     """
     Read instrument calender into memory.
     Generate '~astropy.table.Table' object of instrument calendar throughout scheduling period.
-    If the calendar is missing a night in the scheduling period, assign 'null' to all fields.
+    If the calendar is missing a night in the scheduling period, assign 'all' to all fields.
 
     Columns in InstTable:
 
@@ -15,8 +15,10 @@ def instrument_table(filename, dates):
         'date'      str     calendar date
         'insts'     str     names of instruments installed on telescope
         'gmos_fpu'  str     GMOS focal plane unit
+        'gmos_mos'  str     GMOS MOS masks
         'gmos_disp' str     GMOS disperser
         'f2_fpu'    str     Flamingos-2 focal plane unit
+        'f2_mos'    str     Flamingos-2 MOS masks
 
     Parameters
     ----------
@@ -30,8 +32,6 @@ def instrument_table(filename, dates):
     -------
     '~astropy.table.Table'
     """
-
-    verbose = False
 
     # Read file
     inputlines = []
@@ -47,7 +47,7 @@ def instrument_table(filename, dates):
         [print(instline) for instline in instlines]
 
     # Get calendar rows of dates in scheduling period.
-    # If calendar is missing date, assigned 'null' to all fields.
+    # If calendar is missing date, assigned 'all' to all fields.
     inst_rows = []
     for i in range(len(dates)):
 
@@ -62,9 +62,9 @@ def instrument_table(filename, dates):
         if len(i_row) == 1:
             inst_rows.append(instlines[i_row[0]])
         else:
-            inst_rows.append([dates[i], 'null', 'null', 'null', 'null'])
+            inst_rows.append([dates[i], 'all', 'all', 'all', 'all', 'all', 'all'])
 
     if verbose:
         [print(row) for row in inst_rows]
 
-    return Table(np.array(inst_rows), names=['date', 'insts', 'gmos_fpu', 'gmos_disp', 'f2_fpu'])
+    return Table(np.array(inst_rows), names=['date', 'insts', 'gmos_fpu', 'gmos_mos', 'gmos_disp', 'f2_fpu', 'f2_mos'])

@@ -3,9 +3,10 @@
 # get_timing_windows is the main method.
 
 
-import time as t
+# import time as t
 import astropy.units as u
 from astropy.time import Time
+from multiprocessing import cpu_count
 from joblib import Parallel, delayed
 import numpy as np
 import re
@@ -354,7 +355,8 @@ def twilights(twilight_evening, twilight_morning, obs_windows):
         return None
 
 
-def instrument(i_obs, obs_inst, obs_disp, obs_fpu, insts, gmos_disp, gmos_fpu, f2_fpu):
+def instrument(i_obs, obs_inst, obs_disp, obs_fpu, obs_mos, insts, gmos_disp, gmos_fpu, gmos_mos, f2_fpu, f2_mos,
+               verbose = False):
     """
     Constrain observation timing constraints in accordance with the installed instruments
     and component configuration on the current time.
@@ -374,6 +376,9 @@ def instrument(i_obs, obs_inst, obs_disp, obs_fpu, insts, gmos_disp, gmos_fpu, f
     obs_fpu : list of string
         Observation focal plane units
 
+    obs_mos : list of string
+        Observation custom mask name
+
     insts : list of strings
         Instruments installed on current night
 
@@ -381,24 +386,31 @@ def instrument(i_obs, obs_inst, obs_disp, obs_fpu, insts, gmos_disp, gmos_fpu, f
         GMOS disperser installed on current night
 
     gmos_fpu : list of strings
-        GMOS focal plane unit installed on current night
+        GMOS focal plane units (not MOS) installed on current night
+
+    gmos_mos : list of strings
+        GMOS MOS masks installed on current night
 
     f2_fpu : list of strings
-        Flamingos-2 focal plane unit installed on current night
+        Flamingos-2 focal plane units (not MOS) installed on current night
+
+    f2_mos : list of strings
+        Flamingos-2 MOS masks installed on current night
 
     Returns
     -------
     in_obs : integer array
         List indices for observations matching tonight's instrument configuration.
     """
-    verbose = False
 
     if verbose:
         print('Installed instruments')
         print('insts', insts)
         print('gmos_disp', gmos_disp)
         print('gmos_fpu', gmos_fpu)
+        print('gmos_mos', gmos_mos)
         print('f2_fpu', f2_fpu)
+        print('f2_mos', f2_mos)
         print('i_obs', i_obs)
 
     if len(i_obs) == 0:
@@ -415,18 +427,20 @@ def instrument(i_obs, obs_inst, obs_disp, obs_fpu, insts, gmos_disp, gmos_fpu, f
         for i in range(len(obs_inst)):
 
             if verbose:
-                print('obs_inst[i], obs_disp[i], obs_fpu[i]', obs_inst[i], obs_disp[i], obs_fpu[i])
+                print('obs_inst[i], obs_disp[i], obs_fpu[i], obs_mos[i]', obs_inst[i], obs_disp[i], obs_fpu[i], obs_mos[i])
 
-            if obs_inst[i] in insts or insts == 'null':
+            if obs_inst[i] in insts or insts == 'all':
 
                 if 'GMOS' in obs_inst[i]:
-                    if ((obs_disp[i] in gmos_disp) or ('null' in gmos_disp))\
-                        and ((obs_fpu[i] in gmos_fpu) or ('null' in gmos_fpu)):
+                    if ((obs_disp[i] in gmos_disp) or ('all' in gmos_disp))\
+                        and (((obs_fpu[i] in gmos_fpu) or ('all' in gmos_fpu))\
+                        or ((obs_mos[i] in gmos_mos) or (('all' in gmos_mos) and ('Custom Mask' == obs_fpu[i])))):
                         in_obs.append(i)
                         if verbose:
                             print('Added i =', i)
                 elif 'Flamingos' in obs_inst[i]:
-                    if ((obs_fpu[i] in f2_fpu) or ('null' in f2_fpu)):
+                    if ((obs_fpu[i] in f2_fpu) or ('all' in f2_fpu))\
+                        or ((obs_mos[i] in f2_mos) or (('all' in f2_mos) and ('Custom Mask' == obs_fpu[i]))):
                         in_obs.append(i)
                         if verbose:
                             print('Added i =', i)
@@ -661,7 +675,7 @@ def elevation_const(targets, i_wins, elev_const):
     return i_wins
 
 
-def get_timing_windows(site, timetable, moon, obs, progs, instcal, current_time=None, verbose=False):
+def get_timing_windows(site, timetable, moon, obs, progs, instcal, current_time=None, verbose=False, debug=False):
     """
     Main timing windows algorithm.  This is the main method that generates timing windows and the
     target data tables.
@@ -709,8 +723,8 @@ def get_timing_windows(site, timetable, moon, obs, progs, instcal, current_time=
     """
 
     verbose_progress = verbose  # print progress
-    verbose = False  # basic outputs
-    verbose2 = False  # detailed outputs
+    verbose = debug  # basic outputs
+    verbose2 = debug  # detailed outputs
 
     # ====== Convert timing constraints to time windows ======
     if verbose_progress:
@@ -727,7 +741,8 @@ def get_timing_windows(site, timetable, moon, obs, progs, instcal, current_time=
     # print(max(timetable['twilight_evening'].data[0], progs['prog_start'].data[obs['i_prog'].data[0]]))
     # print(min(timetable['twilight_morning'].data[-1], progs['prog_end'].data[obs['i_prog'].data[0]]))
 
-    time_windows = Parallel(n_jobs=10)(
+    ncpu = cpu_count()
+    time_windows = Parallel(n_jobs=ncpu)(
         delayed(convconstraint)(
             time_const=obs['time_const'][i],
             start=max(timetable['twilight_evening'].data[0], progs['prog_start'].data[obs['i_prog'].data[i]]),
@@ -745,7 +760,7 @@ def get_timing_windows(site, timetable, moon, obs, progs, instcal, current_time=
     if verbose_progress:
         print('...timing windows (twilights)')
     # Constrain time windows to within nautical twilights
-    time_windows = Parallel(n_jobs=10)(delayed(twilights)(twilight_evening=timetable['twilight_evening'].data,
+    time_windows = Parallel(n_jobs=ncpu)(delayed(twilights)(twilight_evening=timetable['twilight_evening'].data,
                                                           twilight_morning=timetable['twilight_morning'].data,
                                                           obs_windows=time_windows[i])
                                        for i in range(len(obs)))
@@ -784,15 +799,18 @@ def get_timing_windows(site, timetable, moon, obs, progs, instcal, current_time=
     # Constrain time windows according to the installed instruments and
     # component configuration on each night
 
-    i_obs_insts = Parallel(n_jobs=10)(delayed(instrument)(i_obs=i_obs_nightly[i],
+    i_obs_insts = Parallel(n_jobs=ncpu)(delayed(instrument)(i_obs=i_obs_nightly[i],
                                                           obs_inst=obs['inst'].data,
                                                           obs_disp=obs['disperser'].data,
                                                           obs_fpu=obs['fpu'].data,
+                                                          obs_mos=obs['custom_mask_mdf'].data,
                                                           insts=instcal['insts'].data[i],
                                                           gmos_disp=instcal['gmos_disp'].data[i],
                                                           gmos_fpu=instcal['gmos_fpu'].data[i],
-                                                          f2_fpu=instcal['f2_fpu'].data[i])
-                                      for i in range(len(timetable['date'])))
+                                                          gmos_mos=instcal['gmos_mos'].data[i],
+                                                          f2_fpu=instcal['f2_fpu'].data[i],
+                                                          f2_mos = instcal['f2_fpu'].data[i])
+                                            for i in range(len(timetable['date'])))
 
     # # Use for loop for easier troubleshooting
     # i_obs_insts = [instrument(i_obs=i_obs_nightly[i],

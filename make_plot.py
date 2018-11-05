@@ -587,7 +587,7 @@ def _hour_from_midnight(local_time):
     if hr < 12. * u.h:
         midnight = Time(local_time[0].iso[0:10])
     else:
-        midnight = Time(local_time[0].iso[0:10]) + u.d
+        midnight = Time(local_time[0].iso[0:10]) + 1. * u.d
     return (Time(local_time) - midnight).to(u.h)
 
 

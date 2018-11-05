@@ -1,109 +1,109 @@
-UT	Instrument	GMOS FPU	GMOS Disperser	F2 FPU
-----	-----	--------	--------------	------
-2018-04-01	GPI,cal,GMOS-S,INGRINS,Flamingos2,Visitor Instrument	null	null	null
-2018-04-02	GPI,cal,GMOS-S,INGRINS,Flamingos2,Visitor Instrument	null	null	null
-2018-04-03	GPI,cal,GMOS-S,INGRINS,Flamingos2,Visitor Instrument	null	null	null
-2018-04-04	GPI,cal,GMOS-S,INGRINS,Flamingos2,Visitor Instrument	null	null	null
-2018-04-05	GPI,cal,GMOS-S,INGRINS,Flamingos2,Visitor Instrument	null	null	null
-2018-04-21	GSAOI,GPI,cal,GMOS-S,INGRINS,Flamingos2	null	null	null
-2018-04-22	GSAOI,GPI,cal,GMOS-S,INGRINS,Flamingos2	null	null	null
-2018-04-23	GSAOI,cal,Canopus,Flamingos2	null	null	null
-2018-04-24	GSAOI,cal,Canopus,Flamingos2	null	null	null
-2018-04-25	GSAOI,cal,Canopus,Flamingos2	null	null	null
-2018-04-26	GSAOI,cal,Canopus,Flamingos2	null	null	null
-2018-04-27	GSAOI,cal,Canopus,Flamingos2	null	null	null
-2018-04-28	GSAOI,cal,Canopus,Flamingos2	null	null	null
-2018-04-29	GSAOI,cal,Canopus,Flamingos2	null	null	null
-2018-04-30	GSAOI,cal,Canopus,Flamingos2	null	null	null
-2018-05-01	GPI,cal,GMOS-S,INGRINS,Flamingos2	null	null	null
-2018-05-02	GPI,cal,GMOS-S,INGRINS,Flamingos2	null	null	null
-2018-05-03	GPI,cal,GMOS-S,INGRINS,Flamingos2	null	null	null
-2018-05-04	GPI,cal,GMOS-S,INGRINS,Flamingos2	null	null	null
-2018-05-05	GPI,cal,GMOS-S,INGRINS,Flamingos2	null	null	null
-2018-05-06	GPI,cal,GMOS-S,INGRINS,Flamingos2	null	null	null
-2018-05-07	GPI,cal,GMOS-S,INGRINS,Flamingos2	null	null	null
-2018-05-08	GPI,cal,GMOS-S,INGRINS,Flamingos2	null	null	null
-2018-05-09	GPI,cal,GMOS-S,INGRINS,Flamingos2	null	null	null
-2018-05-10	GPI,cal,GMOS-S,Canopus,Flamingos2	null	null	null
-2018-05-11	GPI,cal,GMOS-S,Canopus,Flamingos2	null	null	null
-2018-05-12	GPI,cal,GMOS-S,Canopus,Flamingos2	null	null	null
-2018-05-13	GPI,cal,GMOS-S,Canopus,Flamingos2	null	null	null
-2018-05-14	GPI,cal,GMOS-S,Canopus,Flamingos2	null	null	null
-2018-05-15	GPI,cal,GMOS-S,Canopus,Flamingos2	null	null	null
-2018-05-16	GPI,cal,GMOS-S,Canopus,Flamingos2	null	null	null
-2018-05-17	GPI,cal,Canopus,Flamingos2	null	null	null
-2018-05-18	GPI,cal,Canopus,Flamingos2	null	null	null
-2018-05-19	GPI,cal,Canopus,Flamingos2	null	null	null
-2018-05-20	GPI,cal,Canopus,Flamingos2	null	null	null
-2018-05-21	GPI,cal,Canopus,Flamingos2	null	null	null
-2018-05-22	GPI,cal,Canopus,Flamingos2	null	null	null
-2018-05-23	GSAOI,cal,Canopus,Flamingos2	null	null	null
-2018-05-24	GSAOI,cal,Canopus,Flamingos2	null	null	null
-2018-05-25	GSAOI,cal,Canopus,Flamingos2	null	null	null
-2018-05-26	GSAOI,cal,Canopus,Flamingos2	null	null	null
-2018-05-27	GSAOI,cal,Canopus,Flamingos2	null	null	null
-2018-05-28	GSAOI,cal,Canopus,Flamingos2	null	null	null
-2018-05-29	GSAOI,cal,Canopus,Flamingos2	null	null	null
-2018-05-30	GSAOI,cal,Canopus,Flamingos2	null	null	null
-2018-05-31	GSAOI,cal,Canopus,Flamingos2	null	null	null
-2018-06-01	GPI,cal,GMOS-S,INGRINS,Flamingos2,Visitor Instrument	null	null	null
-2018-06-02	GPI,cal,GMOS-S,INGRINS,Flamingos2,Visitor Instrument	null	null	null
-2018-06-03	GPI,cal,GMOS-S,INGRINS,Flamingos2,Visitor Instrument	null	null	null
-2018-06-04	GPI,cal,GMOS-S,INGRINS,Flamingos2,Visitor Instrument	null	null	null
-2018-06-05	GPI,cal,GMOS-S,INGRINS,Flamingos2,Visitor Instrument	null	null	null
-2018-06-06	GSAOI,GPI,cal,GMOS-S,INGRINS,Flamingos2,Visitor Instrument	null	null	null
-2018-06-07	GSAOI,GPI,cal,GMOS-S,INGRINS,Flamingos2,Visitor Instrument	null	null	null
-2018-06-08	GSAOI,GPI,cal,GMOS-S,INGRINS,Flamingos2,Visitor Instrument	null	null	null
-2018-06-09	GSAOI,GPI,cal,GMOS-S,INGRINS,Flamingos2,Visitor Instrument	null	null	null
-2018-06-10	GSAOI,GPI,cal,GMOS-S,Canopus,Flamingos2,Visitor Instrument	null	null	null
-2018-06-11	GSAOI,GPI,cal,GMOS-S,Canopus,Flamingos2,Visitor Instrument	null	null	null
-2018-06-12	GSAOI,GPI,cal,GMOS-S,Canopus,Flamingos2,Visitor Instrument	null	null	null
-2018-06-13	GSAOI,GPI,cal,GMOS-S,Canopus,Flamingos2,Visitor Instrument	null	null	null
-2018-06-14	GSAOI,GPI,cal,GMOS-S,Canopus,Flamingos2,Visitor Instrument	null	null	null
-2018-06-15	GSAOI,GPI,cal,GMOS-S,Canopus,Flamingos2,Visitor Instrument	null	null	null
-2018-06-16	GSAOI,GPI,cal,GMOS-S,Canopus,Flamingos2	null	null	null
-2018-06-17	GSAOI,GPI,cal,GMOS-S,INGRINS,Flamingos2	null	null	null
-2018-06-18	GSAOI,GPI,cal,GMOS-S,INGRINS,Flamingos2	null	null	null
-2018-06-19	GSAOI,GPI,cal,GMOS-S,INGRINS,Flamingos2	null	null	null
-2018-06-20	GSAOI,GPI,cal,GMOS-S,INGRINS,Flamingos2	null	null	null
-2018-06-21	GSAOI,GPI,cal,GMOS-S,INGRINS,Flamingos2	null	null	null
-2018-06-22	GSAOI,GPI,cal,GMOS-S,INGRINS,Flamingos2	null	null	null
-2018-06-23	GSAOI,cal,Canopus,Flamingos2	null	null	null
-2018-06-24	GSAOI,cal,Canopus,Flamingos2	null	null	null
-2018-06-25	GSAOI,cal,Canopus,Flamingos2	null	null	null
-2018-06-26	GSAOI,cal,Canopus,Flamingos2	null	null	null
-2018-06-27	GSAOI,cal,Canopus,Flamingos2	null	null	null
-2018-06-28	GSAOI,cal,Canopus,Flamingos2	null	null	null
-2018-06-29	GSAOI,cal,Canopus,Flamingos2	null	null	null
-2018-06-30	GSAOI,cal,Canopus,Flamingos2	null	null	null
-2018-07-01	GPI,cal,GMOS-S,INGRINS,Flamingos2	null	null	null
-2018-07-02	GPI,cal,GMOS-S,INGRINS,Flamingos2	null	null	null
-2018-07-03	GPI,cal,GMOS-S,INGRINS,Flamingos2	null	null	null
-2018-07-04	GPI,cal,GMOS-S,INGRINS,Flamingos2	null	null	null
-2018-07-05	GPI,cal,GMOS-S,INGRINS,Flamingos2	null	null	null
-2018-07-06	GPI,cal,GMOS-S,INGRINS,Flamingos2	null	null	null
-2018-07-07	GPI,cal,GMOS-S,INGRINS,Flamingos2	null	null	null
-2018-07-08	GPI,cal,GMOS-S,INGRINS,Flamingos2	null	null	null
-2018-07-09	GPI,cal,GMOS-S,INGRINS,Flamingos2	null	null	null
-2018-07-10	GPI,cal,GMOS-S,Canopus,Flamingos2	null	null	null
-2018-07-11	GPI,cal,GMOS-S,Canopus,Flamingos2	null	null	null
-2018-07-12	GPI,cal,GMOS-S,Canopus,Flamingos2	null	null	null
-2018-07-13	GPI,cal,GMOS-S,Canopus,Flamingos2	null	null	null
-2018-07-14	GPI,cal,GMOS-S,Canopus,Flamingos2	null	null	null
-2018-07-15	GPI,cal,GMOS-S,Canopus,Flamingos2	null	null	null
-2018-07-16	GPI,cal,GMOS-S,Canopus,Flamingos2	null	null	null
-2018-07-17	GPI,cal,Canopus,Flamingos2	null	null	null
-2018-07-18	GPI,cal,Canopus,Flamingos2	null	null	null
-2018-07-19	GPI,cal,Canopus,Flamingos2	null	null	null
-2018-07-20	GPI,cal,Canopus,Flamingos2	null	null	null
-2018-07-21	GPI,cal,Canopus,Flamingos2	null	null	null
-2018-07-22	GPI,cal,Canopus,Flamingos2	null	null	null
-2018-07-23	GSAOI,cal,Canopus,Flamingos2	null	null	null
-2018-07-24	GSAOI,cal,Canopus,Flamingos2	null	null	null
-2018-07-25	GSAOI,cal,Canopus,Flamingos2	null	null	null
-2018-07-26	GSAOI,cal,Canopus,Flamingos2	null	null	null
-2018-07-27	GSAOI,cal,Canopus,Flamingos2	null	null	null
-2018-07-28	GSAOI,cal,Canopus,Flamingos2	null	null	null
-2018-07-29	GSAOI,cal,Canopus,Flamingos2	null	null	null
-2018-07-30	GSAOI,cal,Canopus,Flamingos2	null	null	null
-2018-07-31	GSAOI,cal,Canopus,Flamingos2	null	null	null
+UT	Instrument	GMOS FPU	GMOS MOS	GMOS Disperser	F2 FPU	F2 MOS
+----	-----	--------	--------	--------------	------	------
+2018-04-01	GPI,cal,GMOS-S,IGRINS,Flamingos2,Visitor Instrument	all	all	all	all	all
+2018-04-02	GPI,cal,GMOS-S,IGRINS,Flamingos2,Visitor Instrument	all	all	all	all	all
+2018-04-03	GPI,cal,GMOS-S,IGRINS,Flamingos2,Visitor Instrument	all	all	all	all	all
+2018-04-04	GPI,cal,GMOS-S,IGRINS,Flamingos2,Visitor Instrument	all	all	all	all	all
+2018-04-05	GPI,cal,GMOS-S,IGRINS,Flamingos2,Visitor Instrument	all	all	all	all	all
+2018-04-21	GSAOI,GPI,cal,GMOS-S,IGRINS,Flamingos2	all	all	all	all	all
+2018-04-22	GSAOI,GPI,cal,GMOS-S,IGRINS,Flamingos2	all	all	all	all	all
+2018-04-23	GSAOI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-04-24	GSAOI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-04-25	GSAOI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-04-26	GSAOI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-04-27	GSAOI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-04-28	GSAOI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-04-29	GSAOI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-04-30	GSAOI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-05-01	GPI,cal,GMOS-S,IGRINS,Flamingos2	all	all	all	all	all
+2018-05-02	GPI,cal,GMOS-S,IGRINS,Flamingos2	all	all	all	all	all
+2018-05-03	GPI,cal,GMOS-S,IGRINS,Flamingos2	all	all	all	all	all
+2018-05-04	GPI,cal,GMOS-S,IGRINS,Flamingos2	all	all	all	all	all
+2018-05-05	GPI,cal,GMOS-S,IGRINS,Flamingos2	all	all	all	all	all
+2018-05-06	GPI,cal,GMOS-S,IGRINS,Flamingos2	all	all	all	all	all
+2018-05-07	GPI,cal,GMOS-S,IGRINS,Flamingos2	all	all	all	all	all
+2018-05-08	GPI,cal,GMOS-S,IGRINS,Flamingos2	all	all	all	all	all
+2018-05-09	GPI,cal,GMOS-S,IGRINS,Flamingos2	all	all	all	all	all
+2018-05-10	GPI,cal,GMOS-S,Canopus,Flamingos2	all	all	all	all	all
+2018-05-11	GPI,cal,GMOS-S,Canopus,Flamingos2	all	all	all	all	all
+2018-05-12	GPI,cal,GMOS-S,Canopus,Flamingos2	all	all	all	all	all
+2018-05-13	GPI,cal,GMOS-S,Canopus,Flamingos2	all	all	all	all	all
+2018-05-14	GPI,cal,GMOS-S,Canopus,Flamingos2	all	all	all	all	all
+2018-05-15	GPI,cal,GMOS-S,Canopus,Flamingos2	all	all	all	all	all
+2018-05-16	GPI,cal,GMOS-S,Canopus,Flamingos2	all	all	all	all	all
+2018-05-17	GPI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-05-18	GPI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-05-19	GPI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-05-20	GPI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-05-21	GPI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-05-22	GPI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-05-23	GSAOI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-05-24	GSAOI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-05-25	GSAOI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-05-26	GSAOI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-05-27	GSAOI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-05-28	GSAOI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-05-29	GSAOI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-05-30	GSAOI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-05-31	GSAOI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-06-01	GPI,cal,GMOS-S,IGRINS,Flamingos2,Visitor Instrument	all	all	all	all	all
+2018-06-02	GPI,cal,GMOS-S,IGRINS,Flamingos2,Visitor Instrument	all	all	all	all	all
+2018-06-03	GPI,cal,GMOS-S,IGRINS,Flamingos2,Visitor Instrument	all	all	all	all	all
+2018-06-04	GPI,cal,GMOS-S,IGRINS,Flamingos2,Visitor Instrument	all	all	all	all	all
+2018-06-05	GPI,cal,GMOS-S,IGRINS,Flamingos2,Visitor Instrument	all	all	all	all	all
+2018-06-06	GSAOI,GPI,cal,GMOS-S,IGRINS,Flamingos2,Visitor Instrument	all	all	all	all	all
+2018-06-07	GSAOI,GPI,cal,GMOS-S,IGRINS,Flamingos2,Visitor Instrument	all	all	all	all	all
+2018-06-08	GSAOI,GPI,cal,GMOS-S,IGRINS,Flamingos2,Visitor Instrument	all	all	all	all	all
+2018-06-09	GSAOI,GPI,cal,GMOS-S,IGRINS,Flamingos2,Visitor Instrument	all	all	all	all	all
+2018-06-10	GSAOI,GPI,cal,GMOS-S,Canopus,Flamingos2,Visitor Instrument	all	all	all	all	all
+2018-06-11	GSAOI,GPI,cal,GMOS-S,Canopus,Flamingos2,Visitor Instrument	all	all	all	all	all
+2018-06-12	GSAOI,GPI,cal,GMOS-S,Canopus,Flamingos2,Visitor Instrument	all	all	all	all	all
+2018-06-13	GSAOI,GPI,cal,GMOS-S,Canopus,Flamingos2,Visitor Instrument	all	all	all	all	all
+2018-06-14	GSAOI,GPI,cal,GMOS-S,Canopus,Flamingos2,Visitor Instrument	all	all	all	all	all
+2018-06-15	GSAOI,GPI,cal,GMOS-S,Canopus,Flamingos2,Visitor Instrument	all	all	all	all	all
+2018-06-16	GSAOI,GPI,cal,GMOS-S,Canopus,Flamingos2	all	all	all	all	all
+2018-06-17	GSAOI,GPI,cal,GMOS-S,IGRINS,Flamingos2	all	all	all	all	all
+2018-06-18	GSAOI,GPI,cal,GMOS-S,IGRINS,Flamingos2	all	all	all	all	all
+2018-06-19	GSAOI,GPI,cal,GMOS-S,IGRINS,Flamingos2	all	all	all	all	all
+2018-06-20	GSAOI,GPI,cal,GMOS-S,IGRINS,Flamingos2	all	all	all	all	all
+2018-06-21	GSAOI,GPI,cal,GMOS-S,IGRINS,Flamingos2	all	all	all	all	all
+2018-06-22	GSAOI,GPI,cal,GMOS-S,IGRINS,Flamingos2	all	all	all	all	all
+2018-06-23	GSAOI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-06-24	GSAOI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-06-25	GSAOI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-06-26	GSAOI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-06-27	GSAOI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-06-28	GSAOI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-06-29	GSAOI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-06-30	GSAOI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-07-01	GPI,cal,GMOS-S,IGRINS,Flamingos2	all	all	all	all	all
+2018-07-02	GPI,cal,GMOS-S,IGRINS,Flamingos2	all	all	all	all	all
+2018-07-03	GPI,cal,GMOS-S,IGRINS,Flamingos2	all	all	all	all	all
+2018-07-04	GPI,cal,GMOS-S,IGRINS,Flamingos2	all	all	all	all	all
+2018-07-05	GPI,cal,GMOS-S,IGRINS,Flamingos2	all	all	all	all	all
+2018-07-06	GPI,cal,GMOS-S,IGRINS,Flamingos2	all	all	all	all	all
+2018-07-07	GPI,cal,GMOS-S,IGRINS,Flamingos2	all	all	all	all	all
+2018-07-08	GPI,cal,GMOS-S,IGRINS,Flamingos2	all	all	all	all	all
+2018-07-09	GPI,cal,GMOS-S,IGRINS,Flamingos2	all	all	all	all	all
+2018-07-10	GPI,cal,GMOS-S,Canopus,Flamingos2	all	all	all	all	all
+2018-07-11	GPI,cal,GMOS-S,Canopus,Flamingos2	all	all	all	all	all
+2018-07-12	GPI,cal,GMOS-S,Canopus,Flamingos2	all	all	all	all	all
+2018-07-13	GPI,cal,GMOS-S,Canopus,Flamingos2	all	all	all	all	all
+2018-07-14	GPI,cal,GMOS-S,Canopus,Flamingos2	all	all	all	all	all
+2018-07-15	GPI,cal,GMOS-S,Canopus,Flamingos2	all	all	all	all	all
+2018-07-16	GPI,cal,GMOS-S,Canopus,Flamingos2	all	all	all	all	all
+2018-07-17	GPI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-07-18	GPI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-07-19	GPI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-07-20	GPI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-07-21	GPI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-07-22	GPI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-07-23	GSAOI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-07-24	GSAOI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-07-25	GSAOI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-07-26	GSAOI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-07-27	GSAOI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-07-28	GSAOI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-07-29	GSAOI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-07-30	GSAOI,cal,Canopus,Flamingos2	all	all	all	all	all
+2018-07-31	GSAOI,cal,Canopus,Flamingos2	all	all	all	all	all

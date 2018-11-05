@@ -110,6 +110,10 @@ def programtable(gemprgid, partner, pi, prog_time, alloc_time, partner_time, act
 
     prog_time_hr = np.array(prog_time, dtype=float)  # convert from string to float
     alloc_time_hr = np.array(alloc_time, dtype=float)  # convert from string to float
+    # Some programs, e.g. ENG, will have 0 allocated time, give them 10
+    ii = np.where(alloc_time_hr == 0.0)[0]
+    if (len(ii) > 0):
+        alloc_time_hr[ii] = 10.
     prog_comp = prog_time_hr/alloc_time_hr  # fraction completed
 
     progtable['prog_time'] = Column(prog_time_hr, unit='hr')
@@ -127,7 +131,7 @@ def programtable(gemprgid, partner, pi, prog_time, alloc_time, partner_time, act
     return progtable
 
 
-def read_exechours(filename):
+def read_exechours(filename, verbose = False):
     """
     Read exechours_SEMESTER.txt file and return columns as '~astropy.table.Table'.
 
@@ -163,8 +167,6 @@ def read_exechours(filename):
 
     """
 
-    verbose = False
-
     filetext = []
     with open(filename, 'r') as readtext:  # read file into memory.
         # Split lines where commas ',' are found.  Remove newline characters '\n'.
@@ -192,7 +194,7 @@ def read_exechours(filename):
     return exechourstable
 
 
-def get_proginfo(exechourtable, prog_ref_obs, obs_id, partner, pi, band, too_status):
+def get_proginfo(exechourtable, prog_ref_obs, obs_id, partner, pi, band, too_status, verbose = False):
     """
     Add columns for pi, partner, too_status, obs, and scirank to exechours table.
     This information is not found in the execHours file, and is therefore retrieved
@@ -276,8 +278,6 @@ def get_proginfo(exechourtable, prog_ref_obs, obs_id, partner, pi, band, too_sta
             program science ranking band (1, 2, 3, 4)
 
     """
-
-    verbose = False
 
     # Create empty table and new columns as lists
     prog_obs = []

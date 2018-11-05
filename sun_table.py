@@ -2,6 +2,7 @@
 
 import numpy as np
 import astropy.units as u
+from multiprocessing import cpu_count
 from joblib import Parallel, delayed
 from astropy.coordinates import get_sun
 from astropy.table import Table, Column
@@ -66,7 +67,8 @@ def sun_table(latitude, solar_midnight, lst):
     verbose = False
 
     i_day = np.arange(len(solar_midnight))
-    sun = Parallel(n_jobs=10)(delayed(get_sun)(solar_midnight[i]) for i in i_day)
+    ncpu = cpu_count()
+    sun = Parallel(n_jobs=ncpu)(delayed(get_sun)(solar_midnight[i]) for i in i_day)
 
     ra = Column([sun[i].ra.value for i in i_day], name='ra', unit='deg')
     dec = Column([sun[i].dec.value for i in i_day], name='dec', unit='deg')
@@ -80,7 +82,7 @@ def sun_table(latitude, solar_midnight, lst):
         [print(sun[i].ra.value) for i in i_day]
         [print(sun[i].dec.value) for i in i_day]
 
-    ZDHAAZ = Parallel(n_jobs=10)(delayed(calc_zd_ha_az)(lst=lst[i] * u.hourangle, latitude=latitude,
+    ZDHAAZ = Parallel(n_jobs=ncpu)(delayed(calc_zd_ha_az)(lst=lst[i] * u.hourangle, latitude=latitude,
                                                         ra=sun[i].ra, dec=sun[i].dec) for i in i_day)
 
     ZD = Column([ZDHAAZ[i][0].value for i in i_day], name='ZD', unit='deg')

@@ -8,7 +8,7 @@ from astropy.table import Table, Column
 from astropy.time import Time
 import copy
 import importlib
-from joblib import Parallel, delayed
+# from joblib import Parallel, delayed
 import numpy as np
 import os
 import random
@@ -29,7 +29,7 @@ import schedule
 import select_obs
 import timing_windows
 import weights
-from wfpt import weightplotmode
+# from wfpt import weightplotmode
 
 # -- Data structure modules --
 from condition_table import condition_table
@@ -133,6 +133,10 @@ parser = argparse.ArgumentParser(prog='gaqpt.py',
         -u   --update           Download up-to-date IERS(International Earth Rotation and Reference Systems) data.
 
         -rs  --seed             Random seed number for random number generation [DEFAULT=1000].
+
+        -v   --verbose          Print important variables [DEFAULT=False].
+
+        -dg  --debug            Print additional outputs (intended for trouble-shooting) [DEFAULT=False].
 
     *****************************************************************************************************                        
                                     '''))
@@ -248,6 +252,14 @@ parser.add_argument('-rs', '--seed',
                     dest='seed',
                     default=1000)
 
+parser.add_argument('-v', '--verbose',
+                    action='store_true',
+                    default=False)
+
+parser.add_argument('-dg', '--debug',
+                    action='store_true',
+                    default=False)
+
 parse = parser.parse_args()
 
 # Download updated International Earth Rotation and Reference Systems
@@ -331,8 +343,8 @@ else:
 # ==============================================
 
 verbose_progress = True  # print important variable/function names as they are completed
-verbose = False  # print important variables
-verbose2 = False  # print additional outputs (intended for trouble-shooting)
+verbose = parse.verbose  # print important variables
+verbose2 = parse.debug  # print additional outputs (intended for trouble-shooting)
 
 # ====== Get Site Info ======
 if verbose_progress:
@@ -406,11 +418,22 @@ if verbose or verbose2:
     print('\nMoon table:')
     print(moon)
 
+# ====== Instrument configuration calendar table ======
+if verbose_progress:
+    print('...instrument calendar')
+# Create 'astropy.table.Table' (one row per night in plan period)
+# Store date, available instruments, GMOS-FPU, GMOS-Disperser, F2-FPU
+instcal = instrument_table(filename=instfile,
+                           dates=timetable['date'].data)
+if verbose or verbose2:
+    print('\nInstrument calendar:')
+    print(instcal)
+
 # ====== Assemble Observation Table ======
 if verbose_progress:
     print('...observations')
 # Create 'astropy.table.Table' (one observation per row)
-obs = observation_table(filename=otfile)
+obs = observation_table(filename=otfile, verbose = verbose)
 if verbose or verbose2:
     print('\nObservation table:')
     print(obs)
@@ -460,17 +483,6 @@ if verbose or verbose2:
         print('\nproginfo:')
         print(proginfo)
 
-# ====== Instrument configuration calendar table ======
-if verbose_progress:
-    print('...instrument calendar')
-# Create 'astropy.table.Table' (one row per night in plan period)
-# Store date, available instruments, GMOS-FPU, GMOS-Disperser, F2-FPU
-instcal = instrument_table(filename=instfile,
-                           dates=timetable['date'].data)
-if verbose or verbose2:
-    print('\nInstrument calendar:')
-    print(instcal)
-
 # ====== Timing windows and target calendar ======
 if verbose_progress:
     print('...target calendar')
@@ -480,7 +492,7 @@ targetcal = timing_windows.get_timing_windows(site=site,
                                               obs=obs,
                                               progs=progs,
                                               instcal=instcal,
-                                              verbose=True)
+                                              verbose=verbose_progress,debug=verbose2)
 
 obs_original = copy.deepcopy(obs)
 progs_original = copy.deepcopy(progs)
@@ -617,7 +629,7 @@ while True:
                         print(' Did not receive 3 values. No changes were made.')
                     else:
                         try:
-                            iq, cc, wv = convert_conditions.inputcond(iq=tempconds[0], cc=tempconds[1], wv=tempconds[2])
+                            iq, cc, wv = convert_conditions.inputcond(iq=tempconds[0].strip("'"), cc=tempconds[1], wv=tempconds[2].strip("'"))
                             print(' New sky conditions: iq=' + iq + ', cc=' + cc + ', wv=' + wv + '')
                         except ValueError:
                             print(' ValueError: Could not set new conditions. Changes not made.')
@@ -917,7 +929,7 @@ while True:
             # ====== Compute observation time distribution (wra = right ascension weight) ======
             wra_all = weights.radist(ra=obs['ra'].quantity[i_obs],
                                      tot_time=obs['tot_time'].quantity[i_obs],
-                                     obs_time=obs['obs_time'].quantity[i_obs])  # wra of all obs
+                                     obs_time=obs['obs_time'].quantity[i_obs], verbose=verbose)  # wra of all obs
             wra = wra_all[np.where([(i in i_obs) for i in i_queue_obs])[0][:]]  # wra of obs in tonight's queue
 
             if verbose2:
@@ -966,7 +978,7 @@ while True:
                     skybg=targets['bg'].data[i],
                     winddir=wind['dir'].quantity,
                     windvel=wind['vel'].quantity,
-                    wra=wra[i])
+                    wra=wra[i], verbose = verbose, debug=verbose2)
                     for i in range(len(targets))])
 
             # ====== Schedule remaining spaces in plan ======
