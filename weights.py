@@ -63,7 +63,7 @@ def radist(ra, tot_time, obs_time, verbose = True):
     return wra
 
 
-def cond_match(iq, cc, bg, wv, skyiq, skycc, skywv, skybg, negha, verbose = True):
+def cond_match(iq, cc, bg, wv, skyiq, skycc, skywv, skybg, negha, user_prior, verbose = True):
     """
     Match condition constraints to actual conditions:
         - Set cmatch to zero for times where the required conditions
@@ -124,15 +124,15 @@ def cond_match(iq, cc, bg, wv, skyiq, skycc, skywv, skybg, negha, verbose = True
     cmatch[i_bad_cond] = 0.
 
     # Multiply weights by 0.75 where iq better than required and target
-    # does not set soon. Effectively drop one band.
+    # does not set soon and not a ToO. Effectively drop one band.
     i_better_iq = np.where(skyiq < iq)[0][:]
-    if len(i_better_iq) != 0 and negha:
+    if len(i_better_iq) != 0 and negha and 'Target of Opportunity' not in user_prior:
         cmatch = cmatch * 0.75
 
     # Multiply weights by 0.75 where cc better than required and target
-    # does not set soon. Effectively drop one band.
+    # does not set soon and is not a ToO. Effectively drop one band.
     i_better_cc = np.where(skycc < cc)[0][:]
-    if len(i_better_cc) != 0 and negha:
+    if len(i_better_cc) != 0 and negha and 'Target of Opportunity' not in user_prior:
         cmatch = cmatch * 0.75
 
     if verbose:
@@ -222,13 +222,13 @@ def windconditions(dir, vel, az, verbose = False):
 
     Parameters
     ----------
-    az : np.array of 'astropy.units' radians
+    az : np.array of 'astropy.units' degrees
         target azimuth angles along time grid
 
     dir : np.array of 'astropy.units' degrees
         wind direction along time grid
 
-    vel : np.array of 'astropy.units' kilometers/hour
+    vel : np.array of 'astropy.units' m/s
         wind velocity along time grid
 
     Return
@@ -238,7 +238,7 @@ def windconditions(dir, vel, az, verbose = False):
     """
 
     wwind = np.ones(len(az))
-    ii = np.where(np.logical_and(vel > 10.*u.km/u.h, abs(dir - az) < 20.*u.deg))[0][:]
+    ii = np.where(np.logical_and(vel > 10.*u.m/u.s, abs(dir - az) < 20.*u.deg))[0][:]
     if len(ii) != 0:
         wwind[ii] = 0.
 
@@ -246,7 +246,7 @@ def windconditions(dir, vel, az, verbose = False):
         print('vel', vel)
         print('dir', dir)
         print('AZ', az)
-        print('ii ((vel > 10.*u.km/u.h) and (abs(dir - az) < 20.*u.deg))', ii)
+        print('ii ((vel > 10.*u.m/u.s) and (abs(dir - az) < 20.*u.deg))', ii)
         print('wwind', wwind)
 
     return wwind
@@ -364,9 +364,9 @@ def status(prog_comp, obs_comp):
     wstatus : float
         program status weighting factor
     """
-    if prog_comp > 0:
+    if prog_comp > 0.0:
         wstatus = 1.5
-        if obs_comp > 0.:
+        if obs_comp > 0.0:
             wstatus = 2.0
     else:
         wstatus = 1.
@@ -528,7 +528,7 @@ def obsweight(obs_id, ra, dec, iq, cc, bg, wv, elev_const, i_wins, band, user_pr
     winddir : np.array of 'astropy.units' degrees
         wind direction along time grid
 
-    windvel : np.array of 'astropy.units' kilometers/hour
+    windvel : np.array of 'astropy.units' m/s
         wind velocity along time grid
 
     wra : np.ndarray of floats
@@ -550,7 +550,7 @@ def obsweight(obs_id, ra, dec, iq, cc, bg, wv, elev_const, i_wins, band, user_pr
 
     # -- Matching required conditions to actual --
     cmatch = cond_match(iq=iq, cc=cc, bg=bg, wv=wv, skyiq=skyiq, skycc=skycc, skywv=skywv, skybg=skybg,
-                        negha=min(HA) < 0. * u.hourangle, verbose = verbose)
+                        negha=min(HA) < 0. * u.hourangle, user_prior=user_prior, verbose = verbose)
     if verbose:
         print('iq, cc, bg, wv', iq, cc, bg, wv)
         print('skyiq, skycc, skybg, skywv', skyiq, skycc, skybg, skywv)
@@ -607,8 +607,8 @@ def obsweight(obs_id, ra, dec, iq, cc, bg, wv, elev_const, i_wins, band, user_pr
         print('wbal', wbal)
         print('wra', wra)
 
-    if 'Target of Opportunity' in user_prior:  # stop ToOs from dropping a band when sky conditions are good.
-        cmatch = 1.
+    # if 'Target of Opportunity' in user_prior:  # stop ToOs from dropping a band when sky conditions are good.
+    #     cmatch = 1.
 
     # ****** Final weighting function ******
     weight = (twcond + wstatus * wha + wprior + wband  + wbal + wra) * cmatch * wam * wwind * wcplt * wwins

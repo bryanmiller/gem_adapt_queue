@@ -15,7 +15,7 @@ from dt import deltat
 from target_table import target_table
 
 
-def time_window_indices(utc, time_wins, dt):
+def time_window_indices(utc, time_wins, dt, verbose = False):
     """
     Convert the times in time_wins to indices in utc.
 
@@ -44,7 +44,6 @@ def time_window_indices(utc, time_wins, dt):
                       <Time object: scale='utc' format='unix' value=1522661868.0>]
                     ]
     """
-    verbose = False
 
     if verbose:
         print('dt', dt)
@@ -175,7 +174,7 @@ def checkwindow(times, timegrid):
     return bools
 
 
-def convconstraint(time_const, start, end, current_time=None):
+def convconstraint(time_const, start, end, current_time=None, verbose = False):
     """
     Convert and compute time windows within scheduling period from time constraints 'time_const' for and
     observation in the ObsTable structure.
@@ -217,7 +216,6 @@ def convconstraint(time_const, start, end, current_time=None):
     >>> time_const = '[{start, duration, repeats, period}, {start, duration, repeats, period}, ...]'
     >>> time_wins = convconstraint(time_const, start, end)
     """
-    verbose = False
 
     if verbose:
         print('\ntime_const', time_const)
@@ -296,7 +294,7 @@ def convconstraint(time_const, start, end, current_time=None):
             return obs_win
 
 
-def twilights(twilight_evening, twilight_morning, obs_windows):
+def twilights(twilight_evening, twilight_morning, obs_windows, verbose = False):
     """
     Confine observation timing constraints within nautical twilights.
 
@@ -317,7 +315,6 @@ def twilights(twilight_evening, twilight_morning, obs_windows):
     new_windows : list of lists of '~astropy.time.core.Time' pairs or None
         New list of time windows constrained within twilights.
     """
-    verbose = False
 
     new_windows = []
 
@@ -452,7 +449,7 @@ def instrument(i_obs, obs_inst, obs_disp, obs_fpu, obs_mos, insts, gmos_disp, gm
         return in_obs
 
 
-def nightly_calendar(twilight_evening, twilight_morning, time_windows):
+def nightly_calendar(twilight_evening, twilight_morning, time_windows, verbose = False):
     """
     Sort observation time windows by nightly observing window.
 
@@ -475,7 +472,6 @@ def nightly_calendar(twilight_evening, twilight_morning, time_windows):
     obs_windows : array of '~astropy.time.core.Time' pair(s)
         Observation time windows for current night corresponding to 'i_obs'.
     """
-    verbose = False
 
     # define start of current day as local noon
     night_start = twilight_evening
@@ -723,7 +719,7 @@ def get_timing_windows(site, timetable, moon, obs, progs, instcal, current_time=
     """
 
     verbose_progress = verbose  # print progress
-    verbose = debug  # basic outputs
+    # verbose = verbose  # basic outputs
     verbose2 = debug  # detailed outputs
 
     # ====== Convert timing constraints to time windows ======
@@ -809,7 +805,8 @@ def get_timing_windows(site, timetable, moon, obs, progs, instcal, current_time=
                                                           gmos_fpu=instcal['gmos_fpu'].data[i],
                                                           gmos_mos=instcal['gmos_mos'].data[i],
                                                           f2_fpu=instcal['f2_fpu'].data[i],
-                                                          f2_mos = instcal['f2_fpu'].data[i])
+                                                          f2_mos = instcal['f2_fpu'].data[i],
+                                                          verbose=verbose)
                                             for i in range(len(timetable['date'])))
 
     # # Use for loop for easier troubleshooting

@@ -424,7 +424,8 @@ if verbose_progress:
 # Create 'astropy.table.Table' (one row per night in plan period)
 # Store date, available instruments, GMOS-FPU, GMOS-Disperser, F2-FPU
 instcal = instrument_table(filename=instfile,
-                           dates=timetable['date'].data)
+                           dates=timetable['date'].data,
+                           verbose=verbose)
 if verbose or verbose2:
     print('\nInstrument calendar:')
     print(instcal)
@@ -629,7 +630,8 @@ while True:
                         print(' Did not receive 3 values. No changes were made.')
                     else:
                         try:
-                            iq, cc, wv = convert_conditions.inputcond(iq=tempconds[0].strip("'"), cc=tempconds[1], wv=tempconds[2].strip("'"))
+                            iq, cc, wv = convert_conditions.inputcond(iq=tempconds[0].strip("' "), 
+                                                                      cc=tempconds[1].strip(), wv=tempconds[2].strip("' "))
                             print(' New sky conditions: iq=' + iq + ', cc=' + cc + ', wv=' + wv + '')
                         except ValueError:
                             print(' ValueError: Could not set new conditions. Changes not made.')
@@ -649,10 +651,10 @@ while True:
                         continue
                     else:
                         try:
-                            wind = wind_table(size=len(timetable['utc'][0]), direction=float(tempwind[0]),
-                                              velocity=float(tempwind[1]), site_name=site.name)
-                            dir = tempwind[0]
-                            vel = tempwind[1]
+                            dir = float(tempwind[0].strip("' "))
+                            vel = float(tempwind[1].strip("' "))
+                            wind = wind_table(size=len(timetable['utc'][0]), direction=dir,
+                                              velocity=vel, site_name=site.name)
                         except ValueError:
                             print(' ValueError: Could not set new wind conditions.')
                             continue
@@ -943,9 +945,9 @@ while True:
             # ====== Compute visible sky brightnesses at targets ======
             targets['vsb'] = Column([sb(mpa=moon['phase'].quantity[i_day],
                                         mdist=targets['mdist'].quantity[i],
-                                        mZD=moon['ZD'].data[i_day] * u.deg,
+                                        mZD=moon['ZD'].quantity[i_day],
                                         ZD=targets['ZD'].quantity[i],
-                                        sZD=sun['ZD'].data[i_day] * u.deg,
+                                        sZD=sun['ZD'].quantity[i_day],
                                         cc=skycond['cc'].data)
                                      for i in range(len(targets))])
 
@@ -967,7 +969,7 @@ while True:
                     band=obs['band'].data[i_queue_obs[i]],
                     user_prior=obs['user_prior'][i_queue_obs[i]],
                     AM=targets['AM'].data[i],
-                    HA=targets['HA'].data[i] * u.hourangle,
+                    HA=targets['HA'].quantity[i],
                     AZ=targets['AZ'].quantity[i],
                     latitude=site.location.lat,
                     prog_comp=progs['prog_comp'].data[obs['i_prog'][i_queue_obs[i]]],

@@ -1,8 +1,8 @@
 # Matt Bonnyman 22 May 2018
 import numpy as np
+import astropy.units as u
 
-
-def gcirc(ra1, dec1, ra2, dec2):
+def gcirc(ra1, dec1, ra2, dec2, degree=False):
     """
     Compute angular distance between two points on great circle.
 
@@ -19,6 +19,8 @@ def gcirc(ra1, dec1, ra2, dec2):
 
     dec2 : 'astropy.units.quantity.Quantity'
         declination of second point
+
+    degree : Output in degrees?
     """
 
     # more rigorous great circle angular distance calculation.
@@ -30,12 +32,14 @@ def gcirc(ra1, dec1, ra2, dec2):
                         * np.sin(del_ra_div2)**2
                         )
     distance_rad = 2.0 * np.arcsin(sin_theta)
-    return distance_rad
+    if degree:
+        distance = distance_rad.to(u.deg)
+    else:
+        distance = distance_rad
+    return distance
 
 
 def test_gcirc():
-
-    import astropy.units as u
 
     ra1 = 0. * u.deg
     dec1 = 0. * u.deg
@@ -53,7 +57,12 @@ def test_gcirc():
 
     print('was expecting 5*pi/6...')
 
-    assert (gcirc(ra1, dec1, ra2, dec2).round(8) == (5 * np.pi / 6 * u.rad).round(8))
+    assert (gcirc(ra1, dec1, ra2, dec2).round(8) == (5. * np.pi / 6. * u.rad).round(8))
+
+    print('\t' + str(gcirc(ra1, dec1, ra2, dec2, degree=True).round(4)))
+
+    print('was expecting 150 deg...')
+    assert (gcirc(ra1, dec1, ra2, dec2, degree=True).round(4) == (150. * u.deg).round(4))
 
     print('Test successful!')
 

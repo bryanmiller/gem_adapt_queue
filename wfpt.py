@@ -115,8 +115,10 @@ def weightplotmode(site, timetable, sun, moon, obs, progs, targets, skycond, win
                             '({}, {}, {})'.format(str(skycond['iq'][0]), str(skycond['cc'][0]), str(skycond['wv'][0]))))
         print(fprint.format('3.', 'Wind conditions (dir, vel)',
                             '({}, {})'.format(wind['dir'].quantity[0], wind['vel'].quantity[0])))
+        print(fprint.format('x,q', 'Exit', ''))
 
-        userinput = input('\n Select option or provide an observation identifier: ')
+        rawinput = input('\n Select option or provide an observation identifier: ')
+        userinput = rawinput.strip()
 
         if userinput == '1':
             [print(line) for line in printer.listobs(obs=Table(obs['obs_id', 'prog_ref', 'group', 'target']))]
@@ -130,7 +132,8 @@ def weightplotmode(site, timetable, sun, moon, obs, progs, targets, skycond, win
                 continue
             else:
                 try:
-                    iq, cc, wv = convertcond.inputcond(iq=tempconds[0], cc=tempconds[1], wv=tempconds[2])
+                    iq, cc, wv = convertcond.inputcond(iq=tempconds[0].strip("' "), 
+                                                       cc=tempconds[1].strip(), wv=tempconds[2].strip("' "))
                     skycond = condition_table(size=len(timetable['utc'].data[0]), iq=iq, cc=cc, wv=wv)
                 except ValueError:
                     print(' ValueError: Could not set new conditions. Changes not made.')
@@ -144,13 +147,14 @@ def weightplotmode(site, timetable, sun, moon, obs, progs, targets, skycond, win
                 continue
             else:
                 try:
-                    wind = wind_table(size=len(timetable['utc'][0]), direction=float(tempwind[0]),
-                                      velocity=float(tempwind[1]), site_name=site.name)
+                    wind = wind_table(size=len(timetable['utc'][0]), direction=float(tempwind[0].strip("' ")),
+                                      velocity=float(tempwind[1].strip("' ")), site_name=site.name)
                 except ValueError:
                     print(' ValueError: Could not set new wind conditions.')
                     continue
 
-        elif userinput.lower() == 'quit' or userinput.lower() == 'exit' or userinput.lower() == 'q':
+        elif userinput.lower() == 'quit' or userinput.lower() == 'exit' \
+                or userinput.lower() == 'q' or userinput.lower() == 'x':
             break
 
         else:
@@ -168,11 +172,10 @@ def weightplotmode(site, timetable, sun, moon, obs, progs, targets, skycond, win
             # ====== Compute visible sky brightnesses at targets ======
             target['vsb'] = Column([sb(mpa=moon['phase'].quantity[0],
                                        mdist=targets['mdist'].quantity[i],
-                                       mZD=moon['ZD'].data[0] * u.deg,
+                                       mZD=moon['ZD'].quantity[0],
                                        ZD=targets['ZD'].quantity[i],
-                                       sZD=sun['ZD'].data[0] * u.deg,
+                                       sZD=sun['ZD'].quantity[0],
                                        cc=skycond['cc'].data)])
-
 
             # ====== Convert vsb to sky background percentiles ======
             target['bg'] = Column([convert_conditions.sb_to_cond(sb=target['vsb'][0])])
@@ -191,7 +194,7 @@ def weightplotmode(site, timetable, sun, moon, obs, progs, targets, skycond, win
                     band=obs['band'].data[i],
                     user_prior=obs['user_prior'][i],
                     AM=target['AM'].data[0],
-                    HA=target['HA'].data[0] * u.hourangle,
+                    HA=target['HA'].quantity[0],
                     AZ=target['AZ'].quantity[0],
                     latitude=site.location.lat,
                     prog_comp=progs['prog_comp'].data[obs['i_prog'].data[i]],
@@ -240,7 +243,10 @@ def weightplotmode(site, timetable, sun, moon, obs, progs, targets, skycond, win
             make_plot.skyconditions(skycond=skycond,
                                     local_time=timetable['local'].data[0],
                                     date=timetable['date'].data[0],
-                                    bg=target['bg'].quantity[0])
+                                    bg=target['bg'].quantity[0], verbose=True)
+
+            make_plot.vsb(vsb=target['vsb'][0], local_time=timetable['local'].data[0],date=timetable['date'].data[0],
+                          obs_id=obs['obs_id'][i])
 
             make_plot.windconditions(wind=wind,
                                      local_time=timetable['local'].data[0],
@@ -418,7 +424,8 @@ def wfpt():
     moon = moon_table(site=site,
                       solar_midnight=timetable['solar_midnight'].data,
                       utc=timetable['utc'].data,
-                      lst=timetable['lst'].data)
+                      lst=timetable['lst'].data,
+                      verbose=False)
 
     # ====== Assemble Observation Table ======
     if verbose_progress:
@@ -488,8 +495,8 @@ def wfpt():
     skycond = condition_table(size=len(timetable['utc'][0]), iq=iq, cc=cc, wv=wv)
     wind = wind_table(size=len(timetable['utc'][0]), direction=dir, velocity=vel, site_name=site.name)
     if verbose:
-        print(skycond)
-        print(wind)
+        print('skycond\n',skycond)
+        print('wind\n',wind)
 
     # ====== Get remaining available observations in nightly queue ======
     # target_cal[i_day] observations with remaining program time

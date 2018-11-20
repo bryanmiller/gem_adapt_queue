@@ -108,8 +108,8 @@ def airmass(date, plan, obs_id, am, local, moonam=None, obslabels=False, descrip
     if savefig:
         plt.savefig('amplot'+date+'.png')
 
-    plt.show(block=False)
-    input(' Press enter to close plot window...')
+    plt.show(block=True)
+    # input(' Press enter to close plot window...')
     plt.close()
     plt.clf()
 
@@ -223,15 +223,43 @@ def altaz(date, plan, obs_id, az, zd, moonaz=None, moonzd=None, obslabels=False,
         plt.savefig('altazplot'+date+'.png')
 
     plt.tight_layout()
-    plt.show(block=False)
-    input(' Press enter to close plot window...')
+    plt.show(block=True)
+    # input(' Press enter to close plot window...')
     plt.close()
     plt.clf()
 
     return
 
 
-def skyconditions(skycond, local_time, date, bg=None, savefig=False):
+def vsb(vsb, local_time, date, obs_id, savefig=False):
+    """
+    Plot V sky brightness
+    :param vsb:
+    :param local_time:
+    :return:
+    """
+    plt.title(obs_id + ' on ' + date + ': sky brightness')
+
+    hours = _hour_from_midnight(local_time)
+
+    plt.plot(hours, vsb, label='sky brightness', alpha=0.7, linestyle='--')
+
+    # plt.legend(loc='upper right', fontsize=8, markerscale=0.5)
+    plt.ylabel('V sky brightness')
+    plt.xlabel(r'$\Delta t_{mid}$ (hrs)')
+    plt.gca().invert_yaxis()
+
+    if savefig:
+        plt.savefig('vsbplot' + date + '.png')
+
+    plt.tight_layout()
+    plt.show(block=True)
+    # input(' Press enter to close plot window...')
+    plt.close()
+    plt.clf()
+    return
+
+def skyconditions(skycond, local_time, date, bg=None, savefig=False, verbose = True):
     """
     Plot sky conditions percentiles
 
@@ -249,7 +277,6 @@ def skyconditions(skycond, local_time, date, bg=None, savefig=False):
     bg : array of floats (optional)
         Sky background conditions for target
     """
-    verbose = False
 
     plt.title(date + ' sky conditions')
 
@@ -264,11 +291,11 @@ def skyconditions(skycond, local_time, date, bg=None, savefig=False):
         print(skycond['wv'].quantity)
         print(bg)
 
-    if bg is not None:
-        plt.plot(hours, bg, label='sky background', alpha=0.7, linestyle='--')
     plt.plot(hours, skycond['iq'].quantity, label='image quality', alpha=0.7, linestyle='--')
     plt.plot(hours, skycond['cc'].quantity, label='cloud condition', alpha=0.7, linestyle='--')
     plt.plot(hours, skycond['wv'].quantity, label='water vapor', alpha=0.7, linestyle='--')
+    if bg is not None:
+        plt.plot(hours, bg, label='sky background', alpha=0.7, linestyle='--')
     plt.legend(loc='upper right', fontsize=8, markerscale=0.5)
     plt.ylabel('Decimal percentile')
     plt.xlabel(r'$\Delta t_{mid}$ (hrs)')
@@ -277,8 +304,8 @@ def skyconditions(skycond, local_time, date, bg=None, savefig=False):
         plt.savefig('condplot' + date + '.png')
 
     plt.tight_layout()
-    plt.show(block=False)
-    input(' Press enter to close plot window...')
+    plt.show(block=True)
+    # input(' Press enter to close plot window...')
     plt.close()
     plt.clf()
     return
@@ -328,8 +355,8 @@ def windconditions(wind, local_time, date, savefig=False):
         plt.savefig('windplot'+date+'.png')
 
     plt.tight_layout()
-    plt.show(block=False)
-    input(' Press enter to close plot window...')
+    plt.show(block=True)
+    # input(' Press enter to close plot window...')
     plt.close()
     plt.clf()
     return
@@ -377,8 +404,8 @@ def weightfunction(obs_id, local_time, date, weight):
     plt.ylabel('Weight')
     plt.xlabel(r'$\Delta t$ from local midnight (hrs)')
     plt.tight_layout()
-    plt.show(block=False)
-    input('\n Press enter to close window...')
+    plt.show(block=True)
+    # input('\n Press enter to close window...')
     plt.close()
     plt.clf()
     return
@@ -509,7 +536,8 @@ def weightcomponents(obs_id, ra, dec, iq, cc, bg, wv, elev_const, i_wins, band, 
     wha = weights.hourangle(latitude=latitude, dec=dec, ha=HA)
 
     cmatch = weights.cond_match(iq=iq, cc=cc, bg=bg, wv=wv,
-                                skyiq=skyiq, skycc=skycc, skywv=skywv, skybg=skybg, negha=min(HA) < 0. * u.hourangle)
+                                skyiq=skyiq, skycc=skycc, skywv=skywv, skybg=skybg, negha=min(HA) < 0. * u.hourangle,
+                                user_prior=user_prior)
 
     wam = weights.airmass(am=AM, ha=HA, elev=elev_const)
 
@@ -548,8 +576,8 @@ def weightcomponents(obs_id, ra, dec, iq, cc, bg, wv, elev_const, i_wins, band, 
 
     plt.subplots_adjust(top=0.92, bottom=0.08, left=0.10, right=0.95, hspace=0.25, wspace=0.35)
     plt.tight_layout()
-    plt.show(block=False)
-    input('\n Press enter to close window...')
+    plt.show(block=True)
+    # input('\n Press enter to close window...')
     plt.close()
     plt.clf()
 
@@ -562,8 +590,22 @@ def weightcomponents(obs_id, ra, dec, iq, cc, bg, wv, elev_const, i_wins, band, 
 
     plt.subplots_adjust(top=0.92, bottom=0.08, left=0.10, right=0.95, hspace=0.25, wspace=0.35)
     plt.tight_layout()
-    plt.show(block=False)
-    input('\n Press enter to close window...')
+    plt.show(block=True)
+    # input('\n Press enter to close window...')
+    plt.close()
+    plt.clf()
+
+    # All in one
+    plt.plot(hours, wha, label='Hour Angle')
+    plt.plot(hours, cmatch, label='Conditions')
+    plt.plot(hours, wam, label='Airmass')
+    plt.plot(hours, wwind, label='Wind')
+    plt.plot(hours, wwins, label='Timing windows')
+    plt.xlabel(r'$\Delta t_{mid}$ (hrs)')
+    plt.ylabel('Weight')
+    plt.legend()
+    plt.show(block=True)
+    # input('\n Press enter to close window...')
     plt.close()
     plt.clf()
 

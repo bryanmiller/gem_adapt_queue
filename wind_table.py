@@ -2,6 +2,7 @@
 
 import numpy as np
 from astropy.table import Table, Column
+import astropy.units as u
 
 
 def wind_table(size, direction, velocity, site_name, random=False):
@@ -65,15 +66,15 @@ def wind_table(size, direction, velocity, site_name, random=False):
         print(vel)
         print(dir)
 
-    if vel < 0:
+    if vel < 0.:
         vel = 0.
-    if dir < 0:
-        dir = dir + 360
+    if dir < 0.:
+        dir = dir + 360.
     if dir > 360:
-        dir = dir - 360
+        dir = dir - 360.
 
-    vels = np.full(size, vel)
-    dirs = np.full(size, dir)
+    vels = np.full(size, vel) * u.m / u.s
+    dirs = np.full(size, dir) * u.deg
 
     return Table((Column(vels, name='vel', unit='m/s'), Column(dirs, name='dir', unit='deg')))
 

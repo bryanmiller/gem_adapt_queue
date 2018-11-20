@@ -20,7 +20,7 @@ def xair(z):
     return val
 
 
-def sb(mpa, mdist, mZD, ZD, sZD, cc):
+def sb(mpa, mdist, mZD, ZD, sZD, cc, verbose = False):
     """
     Calculate sky brightness based on formulas from Krisciunas & Schaefer 1991
     Bryan Miller
@@ -33,7 +33,7 @@ def sb(mpa, mdist, mZD, ZD, sZD, cc):
     Parameters
     ----------
     mpa : '~astropy.units.Quantity'
-        Moon phase angle at solar midnight in radians
+        Moon phase angle at solar midnight in degrees
 
     mdist : array of '~astropy.units.Quantity'
         Numpy array of angular distances between target and moon
@@ -55,7 +55,6 @@ def sb(mpa, mdist, mZD, ZD, sZD, cc):
     skybright : float
         Numpy array of sky background magnitudes at target location
     """
-    verbose = False
 
     k = 0.172  # mag/airmass relation for Hale Pohaku
     a = 2.51189
@@ -90,9 +89,9 @@ def sb(mpa, mdist, mZD, ZD, sZD, cc):
         fpkk = 6.2e7 * u.deg**2 / (mdist[kk]**2)  # original said fp=6.2d7/mdist[j]^2
         Bmoon[kk] = fpkk * istar * 10 ** (-0.4 * k * xair(mZD[kk])) * (1.0 - 10 ** (-0.4 * k * xair(ZD[kk])))
 
-    hh = np.where(cc > 0.5)[0][:]
-    if len(hh) != 0:  # very simple increase in SB if there are clouds
-        Bmoon[hh] = 2.0 * Bmoon[hh]
+    # hh = np.where(np.logical_and(cc > 0.5, cc < 0.8))[0][:]
+    # if len(hh) != 0:  # very simple increase in SB if there are thin clouds
+    #     Bmoon[hh] = 2.0 * Bmoon[hh]
 
     skybright = Q - np.log10((Bmoon + Bsky)/0.263) / np.log10(a)  # sky brightness in Vmag/arcsec^2
 

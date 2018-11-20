@@ -87,6 +87,6 @@ def sun_table(latitude, solar_midnight, lst):
 
     ZD = Column([ZDHAAZ[i][0].value for i in i_day], name='ZD', unit='deg')
     HA = Column([ZDHAAZ[i][1].value for i in i_day], name='HA', unit='hourangle')
-    AZ = Column([ZDHAAZ[i][2].value for i in i_day], name='AZ', unit='rad')
+    AZ = Column([ZDHAAZ[i][2].value for i in i_day], name='AZ', unit='deg')
 
     return Table((ra, dec, ZD, HA, AZ))

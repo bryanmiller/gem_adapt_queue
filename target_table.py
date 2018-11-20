@@ -93,12 +93,12 @@ def target_table(i_obs, latitude, lst, utc, obs_id, obs_ra, obs_dec, moon_ra, mo
 
         targettable['HA'] = Column([ZDHAAZ[i][1] for i in range(n_obs)], unit='hourangle')
 
-        targettable['AZ'] = Column([ZDHAAZ[i][2] for i in range(n_obs)], unit='rad')
+        targettable['AZ'] = Column([ZDHAAZ[i][2] for i in range(n_obs)], unit='deg')
 
         targettable['AM'] = Column([airmass(ZDHAAZ[i][0]) for i in range(n_obs)])
 
-        targettable['mdist'] = Column([gcirc(moon_ra, moon_dec, obs_ra[i_obs[i]], obs_dec[i_obs[i]])
-                                       for i in range(n_obs)], unit='rad')
+        targettable['mdist'] = Column([gcirc(moon_ra, moon_dec, obs_ra[i_obs[i]], obs_dec[i_obs[i]], degree=True)
+                                       for i in range(n_obs)], unit='deg')
 
         # dt = deltat(time_strings=utc[0:2])  # time grid spacing
         # targettable['i_wins'] = Column([time_window_indices(utc=utc, time_wins=time_windows[i], dt=dt)

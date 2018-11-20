@@ -28,13 +28,13 @@ def calc_zd_ha_az(lst, latitude, ra, dec):
     Returns
     -------
     ZD : np.array of '~astropy.units.quantity.Quantity'
-        Zenith distance angle(s).
+        Zenith distance angle(s). [deg]
 
     HA : np.array of '~astropy.units.quantity.Quantity'
-        Hour angle(s).
+        Hour angle(s). [hourangle]
 
     AZ : np.array of '~astropy.units.quantity.Quantity'
-        Azimuth angle(s).
+        Azimuth angle(s). [deg]
     """
 
     verbose = False
@@ -45,10 +45,10 @@ def calc_zd_ha_az(lst, latitude, ra, dec):
         print('lst', lst.value)
         print('hra', hra.value)
 
-    h1 = np.arcsin(np.sin(latitude) * np.sin(dec) + np.cos(latitude) * np.cos(dec) * np.cos(hra))
+    h1 = np.arcsin(np.sin(latitude) * np.sin(dec) + np.cos(latitude) * np.cos(dec) * np.cos(hra)).to(u.deg)
     if verbosesteps: print('h1', h1)
 
-    AZ = np.arccos((np.sin(dec) - np.sin(latitude) * np.sin(h1)) / (np.cos(latitude) * np.cos(h1)))
+    AZ = np.arccos((np.sin(dec) - np.sin(latitude) * np.sin(h1)) / (np.cos(latitude) * np.cos(h1))).to(u.deg)
     if verbosesteps: print('AZtemp', AZ.value)
 
     HA = copy.deepcopy(hra)
@@ -84,8 +84,8 @@ def calc_zd_ha_az(lst, latitude, ra, dec):
         print('dec', dec.value)
         print('latitude', latitude.value)
         print('lst', lst.value)
-        print('ZD ', ZD.value)
-        print('HA', HA.value)
-        print('AZ', AZ.value, AZ.unit)
+        print('ZD ', ZD)
+        print('HA', HA)
+        print('AZ', AZ)
 
     return ZD, HA, AZ

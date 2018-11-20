@@ -11,6 +11,7 @@ from astropy import coordinates
 
 #gemini packages
 from dt import deltat
+import timeutils as tu
 
 def shortid(obsid):
     """
@@ -117,8 +118,8 @@ def plantable(plan, obs, targets, timetable, description=''):
         print('i_start', i_start)
         print('i_end', i_end)
 
-    sprint = '{0:17.15s}{1:12.10s}{2:7.5s}{3:7.5s}{4:7.5s}{5:7.5s}{6:7.5s}{7:7.5s}{8:7.5s}{9:7.5s}{10:6.4s}' \
-             '{11:7.5s}{12:10.10}'
+    sprint = '{0:17.15s}{1:12.10s}{2:>6.5s}{3:>7.6s}{4:>7.5s}{5:>7.5s}{6:>7.5s}{7:>7.5s}{8:>7.5s}{9:>7.5s}{10:>6.4s}' \
+             '{11:>7.5s}{12:>10.10}'
 
     lines = ['', '', '{:>60s}'.format(str('-- ' + timetable['date'][0] + ' schedule '+description+'--')), '',
              str(sprint.format('Obs. ID', 'Target', 'RA', 'Dec.', 'Instr.', 'UTC', 'LST', 'Start', 'End', 'Dur.', 'AM',
@@ -126,7 +127,8 @@ def plantable(plan, obs, targets, timetable, description=''):
              str(sprint.format('-------', '------', '--', '---', '-----', '---', '---', '-----', '---', '---', '--',
                                '--', '--------')),
              str(sprint.format('12 deg.twi.', '', '', '', '', timetable['utc'][0][0].iso[11:16],
-                               str('{:.2f}'.format(timetable['lst'][0][0])), timetable['local'][0][0].iso[11:16],
+                               # str('{:.2f}'.format(timetable['lst'][0][0])), timetable['local'][0][0].iso[11:16],
+                               tu.dec2sex(timetable['lst'][0][0],hour=True,cutsec=True,leadzero=2), timetable['local'][0][0].iso[11:16],
                                '', '', '', '', ''))]
 
     for i in range(len(obs_order)):
@@ -147,12 +149,15 @@ def plantable(plan, obs, targets, timetable, description=''):
                 print(str(obs['obs_comp'][obs_order[i]] >= 1.))
 
             obs_name = shortid(targets['id'][obs_order[i]])
-            ra = obs['ra'].quantity[obs_order[i]].round(2)
-            dec = obs['dec'].quantity[obs_order[i]].round(2)
+            # ra = obs['ra'].quantity[obs_order[i]].round(2)
+            ra = tu.dec2sex(obs['ra'].quantity[obs_order[i]].value, tohour=True, cutsec=True, leadzero=2)
+            # dec = obs['dec'].quantity[obs_order[i]].round(2)
+            dec = tu.dec2sex(obs['dec'].quantity[obs_order[i]].value, tohour=False, cutsec=True, leadzero=2)
             targ_name = obs['target'][obs_order[i]]
             inst_name = obs['inst'][obs_order[i]]
             utc_start = timetable['utc'][0][i_start[i]].iso
-            lst_start = str('{:.2f}'.format(timetable['lst'][0][i_start[i]]))
+            # lst_start = str('{:.2f}'.format(timetable['lst'][0][i_start[i]]))
+            lst_start = tu.dec2sex(timetable['lst'][0][i_start[i]],hour=True, cutsec=True, leadzero=2)
             local_start = timetable['local'][0][i_start[i]].iso
             local_end = (timetable['local'][0][i_end[i]] + dt).iso
             duration = (timetable['local'][0][i_end[i]] - timetable['local'][0][i_start[i]] + dt).to(u.hr).round(2)
@@ -164,7 +169,8 @@ def plantable(plan, obs, targets, timetable, description=''):
 
     lines.append(str(sprint.format('12 deg. twi.', '', '', '', '',
                                    timetable['utc'][0][-1].iso[11:16],
-                                   str('{:.2f}'.format(timetable['lst'][0][-1])),
+                                   # str('{:.2f}'.format(timetable['lst'][0][-1])),
+                                   tu.dec2sex(timetable['lst'][0][-1],hour=True,cutsec=True,leadzero=2),
                                    timetable['local'][0][-1].iso[11:16], '',
                                    '', '', '', '')))
     return lines
@@ -239,9 +245,10 @@ def suninfo(ra, dec):
             Output info as a list of lines.
     """
     fprint = '{0:<35s}{1}'
-    return ['', fprint.format('Sun ra: ', ra.round(2)),
-            fprint.format('Sun dec: ', dec.round(2))]
-
+    # return ['', fprint.format('Sun ra: ', ra.round(2)),
+    #         fprint.format('Sun dec: ', dec.round(2))]
+    return ['', fprint.format('Sun ra: ', tu.dec2sex(ra.value,tohour=True)),
+            fprint.format('Sun dec: ', tu.dec2sex(dec.value))]
 
 def mooninfo(ra, dec, frac, phase):
     """
@@ -267,8 +274,10 @@ def mooninfo(ra, dec, frac, phase):
             Output info as a list of lines.
     """
     fprint = '{0:<35s}{1}'
-    return ['', fprint.format('Moon ra: ', ra.round(2)),
-            fprint.format('Moon dec: ', dec.round(2)),
+    # return ['', fprint.format('Moon ra: ', ra.round(2)),
+    #         fprint.format('Moon dec: ', dec.round(2)),
+    return ['', fprint.format('Moon ra: ', tu.dec2sex(ra.value, tohour=True)),
+            fprint.format('Moon dec: ', tu.dec2sex(dec.value)),
             fprint.format('Moon fraction: ', frac.round(2)),
             fprint.format('Moon phase: ', phase.round(2))]
 

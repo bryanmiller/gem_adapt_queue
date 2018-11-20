@@ -9,7 +9,7 @@ from astropy.table import Table, Column
 from astropy.coordinates import get_moon
 
 from airmass import airmass
-from sun_horizon import sun_horizon
+# from sun_horizon import sun_horizon
 from calc_zd_ha_az import calc_zd_ha_az
 
 
@@ -25,11 +25,16 @@ def get_moon_fraction(site, midnight):
     return site.moon_illumination(midnight)
 
 
-def get_moon_phase(site, midnight):
-    return site.moon_phase(midnight).value
+def get_moon_phase(site, midnight, degree=False):
+    phase_rad = site.moon_phase(midnight)
+    if degree:
+        phase = phase_rad.to(u.deg)
+    else:
+        phase = phase_rad
+    return phase.value
 
 
-def moon_table(site, solar_midnight, utc, lst):
+def moon_table(site, solar_midnight, utc, lst, verbose = False):
     """
     Compute Moon data for scheduling period and return '~astropy.table' object.
 
@@ -105,8 +110,6 @@ def moon_table(site, solar_midnight, utc, lst):
             air masses along time grids.
     """
 
-    verbose = False
-
     i_day = np.arange(len(solar_midnight))
 
     # sun_horiz = sun_horizon(site)  # angle from zenith at rise/set
@@ -119,8 +122,8 @@ def moon_table(site, solar_midnight, utc, lst):
     fraction = Column(Parallel(n_jobs=ncpu)(delayed(get_moon_fraction)(site, solar_midnight[i]) for i in i_day),
                       name='fraction')
 
-    phase = Column(Parallel(n_jobs=ncpu)(delayed(get_moon_phase)(site, solar_midnight[i]) for i in i_day), name='phase',
-                   unit='rad')
+    phase = Column(Parallel(n_jobs=ncpu)(delayed(get_moon_phase)(site, solar_midnight[i], degree=True) for i in i_day), name='phase',
+                   unit='deg')
 
     moon_midnight = Parallel(n_jobs=ncpu)(delayed(get_moon)(solar_midnight[i], location=site.location) for i in i_day)
     ra_mid = Column([moon_midnight[i].ra.value for i in i_day], name='ra_mid', unit='deg')
@@ -135,7 +138,7 @@ def moon_table(site, solar_midnight, utc, lst):
 
     ZD = Column([ZDHAAZ[i][0].value for i in i_day], name='ZD', unit='deg')
     HA = Column([ZDHAAZ[i][1].value for i in i_day], name='HA', unit='hourangle')
-    AZ = Column([ZDHAAZ[i][2].value for i in i_day], name='AZ', unit='rad')
+    AZ = Column([ZDHAAZ[i][2].value for i in i_day], name='AZ', unit='deg')
     AM = Column([airmass(ZDHAAZ[i][0]) for i in i_day], name='AM')
 
     if verbose:
