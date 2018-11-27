@@ -237,15 +237,18 @@ def windconditions(dir, vel, az, verbose = False):
         wind condition weights
     """
 
+    if verbose:
+        print('Wind vel:', vel)
+        print('Wind dir:', dir)
+        print('AZ', az)
+
     wwind = np.ones(len(az))
-    ii = np.where(np.logical_and(vel > 10.*u.m/u.s, abs(dir - az) < 20.*u.deg))[0][:]
+    ii = np.where(np.logical_and(vel > 10.*u.m/u.s,
+                                 np.logical_or(abs(az - dir) <= 20.*u.deg, 360.*u.deg - abs(az - dir) <= 20.*u.deg)))[0][:]
     if len(ii) != 0:
         wwind[ii] = 0.
 
     if verbose:
-        print('vel', vel)
-        print('dir', dir)
-        print('AZ', az)
         print('ii ((vel > 10.*u.m/u.s) and (abs(dir - az) < 20.*u.deg))', ii)
         print('wwind', wwind)
 
