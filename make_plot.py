@@ -132,13 +132,13 @@ def altaz(date, plan, obs_id, az, zd, moonaz=None, moonzd=None, obslabels=False,
     obs_id : np.array of string
         observation identifiers of targets.
 
-    az : arrays of 'astropy.units' radians
+    az : arrays of 'astropy.units' degrees
         target azimuth angles along time grid
 
     zd : arrays of 'astropy.units' degrees
         target zenith distance angles along time grid
 
-    moonaz : array of 'astropy.units' radians, optional
+    moonaz : array of 'astropy.units' degrees, optional
         moon azimuth angles along time grid. Default = None
 
     moonzd : arrays of 'astropy.units' degrees, optional
@@ -175,7 +175,7 @@ def altaz(date, plan, obs_id, az, zd, moonaz=None, moonzd=None, obslabels=False,
 
     if moonaz is not None and moonzd is not None:
         kk = np.where(moonzd <= 90*u.deg)
-        ax.plot(moonaz[kk], moonzd[kk], linestyle=':', label='Moon', linewidth=thn,
+        ax.plot(moonaz[kk].to(u.rad), moonzd[kk], linestyle=':', label='Moon', linewidth=thn,
                 color='grey', markersize=0)
 
     index = np.unique(pplan)  # indices of obs in plan
@@ -183,7 +183,7 @@ def altaz(date, plan, obs_id, az, zd, moonaz=None, moonzd=None, obslabels=False,
     for ind in index:
         if ind >= 0:
             ii = np.where(zd[ind] <= 90*u.deg)
-            ax.plot(az[ind][ii], zd[ind][ii], linestyle='-', linewidth=thn,
+            ax.plot(az[ind][ii].to(u.rad), zd[ind][ii], linestyle='-', linewidth=thn,
                     color='grey', markersize=0)
 
     for ind in index:
@@ -203,7 +203,7 @@ def altaz(date, plan, obs_id, az, zd, moonaz=None, moonzd=None, obslabels=False,
                 if verbose:
                     print('jj', jj)
 
-                ax.plot(az[ind][ii[jj[0]]:ii[jj[-1]]+1],
+                ax.plot(az[ind][ii[jj[0]]:ii[jj[-1]]+1].to(u.rad),
                         zd[ind][ii[jj[0]]:ii[jj[-1]]+1], linestyle='-', linewidth=thk)
 
                 if obslabels:

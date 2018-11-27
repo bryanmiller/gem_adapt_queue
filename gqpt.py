@@ -260,6 +260,10 @@ parser.add_argument('-dg', '--debug',
                     action='store_true',
                     default=False)
 
+parser.add_argument('-z', '--optimize',
+                    action='store_true',
+                    default=False)
+
 parse = parser.parse_args()
 
 # Download updated International Earth Rotation and Reference Systems
@@ -301,6 +305,7 @@ showplanplots = parse.planplots
 showiterationplots = parse.iterplots
 showplanbuildup = parse.buildupplots
 seednum = parse.seed
+optimize = parse.optimize
 
 # Time grid spacing size in hours
 dt = float(parse.gridsize) * u.h
@@ -1015,11 +1020,14 @@ while True:
                 ii = np.where(plan_temp == -1)[0][:]
 
             # ====== Optimize current section of plan (from s1 to end of plan) ======
-            plan_opt = schedule.optimize(plan=plan_temp,
-                                         targets=targets,
-                                         jj=np.arange(s1, len(plan)))
-            if verbose:
-                print('new plan', plan_opt)
+            if optimize:
+                plan_opt = schedule.optimize(plan=plan_temp,
+                                             targets=targets,
+                                             jj=np.arange(s1, len(plan)))
+                if verbose:
+                    print('new plan', plan_opt)
+            else:
+                plan_opt = plan_temp
 
             # ==============================================
             #       ToO or viewing conditions change
@@ -1414,7 +1422,7 @@ while True:
                             obs_id=targets['id'].data,
                             az=targets['AZ'].quantity,
                             zd=targets['ZD'].quantity,
-                            moonaz=moon['AZ'].data[i_day] * u.rad,
+                            moonaz=moon['AZ'].data[i_day] * u.deg,
                             moonzd=moon['ZD'].data[i_day] * u.deg)
 
         if showskyplots:
