@@ -6,7 +6,7 @@ import numpy as np
 import astropy.units as u
 
 
-def radist(ra, tot_time, obs_time, verbose = True):
+def radist(ra, tot_time, obs_time, verbose = False):
     """
     Compute weighting factors for RA distribution of total remaining observation time.
     Observations are binned using 30 degree regions around the celestial sphere.
@@ -63,7 +63,7 @@ def radist(ra, tot_time, obs_time, verbose = True):
     return wra
 
 
-def cond_match(iq, cc, bg, wv, skyiq, skycc, skywv, skybg, negha, user_prior, verbose = True):
+def cond_match(iq, cc, bg, wv, skyiq, skycc, skywv, skybg, negha, user_prior, verbose = False):
     """
     Match condition constraints to actual conditions:
         - Set cmatch to zero for times where the required conditions
@@ -446,7 +446,7 @@ def time_wins(grid_size, i_wins, verbose = False):
 
 
 def obsweight(obs_id, ra, dec, iq, cc, bg, wv, elev_const, i_wins, band, user_prior, AM, HA, AZ, latitude, prog_comp,
-              obs_comp, skyiq, skycc, skybg, skywv, winddir, windvel, wra,  verbose = True, debug = False):
+              obs_comp, skyiq, skycc, skybg, skywv, winddir, windvel, wra,  verbose = False, debug = False):
     """
     Calculate observation weights.
 

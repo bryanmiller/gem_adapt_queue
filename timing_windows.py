@@ -671,7 +671,8 @@ def elevation_const(targets, i_wins, elev_const):
     return i_wins
 
 
-def get_timing_windows(site, timetable, moon, obs, progs, instcal, current_time=None, verbose=False, debug=False):
+def get_timing_windows(site, timetable, moon, obs, progs, instcal, current_time=None, 
+                       verbose_progress=True, verbose=False, debug=False):
     """
     Main timing windows algorithm.  This is the main method that generates timing windows and the
     target data tables.
@@ -718,7 +719,7 @@ def get_timing_windows(site, timetable, moon, obs, progs, instcal, current_time=
 
     """
 
-    verbose_progress = verbose  # print progress
+    # verbose_progress = verbose  # print progress
     # verbose = verbose  # basic outputs
     verbose2 = debug  # detailed outputs
 

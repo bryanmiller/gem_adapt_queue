@@ -498,7 +498,8 @@ targetcal = timing_windows.get_timing_windows(site=site,
                                               obs=obs,
                                               progs=progs,
                                               instcal=instcal,
-                                              verbose=verbose_progress,debug=verbose2)
+                                              verbose_progress=verbose_progress,
+                                              verbose=verbose, debug=verbose2)
 
 obs_original = copy.deepcopy(obs)
 progs_original = copy.deepcopy(progs)
@@ -1093,7 +1094,7 @@ while True:
                 while s1 <= events['i'].data[event_num] <= s2:
 
                     next_event = events[event_num]
-                    i_event = next_event['i'].data[0]  # time grid index when event occurs
+                    i_event = next_event['i']  # time grid index when event occurs
 
                     i_target_current = plan_opt[i_event]  # target table index of current obs
                     if i_target_current != -2:

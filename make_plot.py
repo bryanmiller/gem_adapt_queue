@@ -259,7 +259,7 @@ def vsb(vsb, local_time, date, obs_id, savefig=False):
     plt.clf()
     return
 
-def skyconditions(skycond, local_time, date, bg=None, savefig=False, verbose = True):
+def skyconditions(skycond, local_time, date, bg=None, savefig=False, verbose = False):
     """
     Plot sky conditions percentiles
 

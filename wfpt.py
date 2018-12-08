@@ -243,7 +243,7 @@ def weightplotmode(site, timetable, sun, moon, obs, progs, targets, skycond, win
             make_plot.skyconditions(skycond=skycond,
                                     local_time=timetable['local'].data[0],
                                     date=timetable['date'].data[0],
-                                    bg=target['bg'].quantity[0], verbose=True)
+                                    bg=target['bg'].quantity[0], verbose=verbose)
 
             make_plot.vsb(vsb=target['vsb'][0], local_time=timetable['local'].data[0],date=timetable['date'].data[0],
                           obs_id=obs['obs_id'][i])
