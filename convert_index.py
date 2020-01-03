@@ -7,7 +7,7 @@ def convindex(plan, i_obs):
     Convert indices in plan (which should correspond to nightly target table rows)
     to row indices of corresponding observations in the observation table.
 
-    -2 --> Empty time slot in plan
+    -2 --> Empty tot_time slot in plan
     >= 0 --> Target table row indices
 
     Example

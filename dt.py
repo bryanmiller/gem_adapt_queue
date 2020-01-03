@@ -13,7 +13,7 @@ def deltat(time_strings):
     Returns
     -------
     dt : '~astropy.units.quantity.Quantity'
-        differential time length
+        differential tot_time length
 
     """
     return (Time(time_strings[1]) - Time(time_strings[0])).to('hour').round(2)

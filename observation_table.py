@@ -129,7 +129,7 @@ def observation_table(filename, verbose = False):
         else:
             tootype = 'None'
         too_status.append(tootype)
-    obstable['too_status'] = tootype
+    obstable['too_status'] = too_status
 
     obstable['group'] = cattable['group'][i_obs]
     obstable['elev_const'] = [convert_elevation(cattable['elev_const'][i]) for i in i_obs]

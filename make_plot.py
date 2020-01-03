@@ -21,16 +21,16 @@ def airmass(date, plan, obs_id, am, local, moonam=None, obslabels=False, descrip
         date of current plan
 
     plan : numpy integer array or None
-        indices of targets from 'targets' along time grid.
+        indices of targets from 'targets' along tot_time grid.
 
     obs_id : np.array of string
         observation identifiers of targets.
 
     am : np.arrays of float
-        target airmasses along time grid.
+        target airmasses along tot_time grid.
 
     local : np.array of string
-        local times along time grid in format accepted by 'astropy.time.Time'.
+        local times along tot_time grid in format accepted by 'astropy.tot_time.Time'.
 
     moonam : array of floats, optional
         moon air mass values. Default = None
@@ -127,22 +127,22 @@ def altaz(date, plan, obs_id, az, zd, moonaz=None, moonzd=None, obslabels=False,
         date of current schedule
 
     plan : numpy integer array or None
-        indices of targets from 'targets' along time grid.
+        indices of targets from 'targets' along tot_time grid.
 
     obs_id : np.array of string
         observation identifiers of targets.
 
     az : arrays of 'astropy.units' degrees
-        target azimuth angles along time grid
+        target azimuth angles along tot_time grid
 
     zd : arrays of 'astropy.units' degrees
-        target zenith distance angles along time grid
+        target zenith distance angles along tot_time grid
 
     moonaz : array of 'astropy.units' degrees, optional
-        moon azimuth angles along time grid. Default = None
+        moon azimuth angles along tot_time grid. Default = None
 
     moonzd : arrays of 'astropy.units' degrees, optional
-        moon zenith distance angles along time grid. Default = None
+        moon zenith distance angles along tot_time grid. Default = None
 
     obslabels : boolean, optional
         annotate plot with observation identifiers. Default = False
@@ -268,8 +268,8 @@ def skyconditions(skycond, local_time, date, bg=None, savefig=False, verbose = F
     skycond : 'astropy.table.Table'
         Sky conditions table with columns 'iq', 'cc', 'wv'.
 
-    local_time : array of strings or 'astropy.time.core.Time' array
-        Time grid of local times in format accepted by 'astropy.time.Time'
+    local_time : array of strings or 'astropy.tot_time.core.Time' array
+        Time grid of local times in format accepted by 'astropy.tot_time.Time'
 
     date : string
         Plot date
@@ -321,10 +321,10 @@ def windconditions(wind, local_time, date, savefig=False):
         Wind conditions table with columns dir, vel.
 
     local_time : array of strings
-        time grid of local times in format accepted by 'astropy.time.Time'
+        tot_time grid of local times in format accepted by 'astropy.tot_time.Time'
 
     date : string
-        Date of time window
+        Date of tot_time window
     """
 
     verbose = False
@@ -364,15 +364,15 @@ def windconditions(wind, local_time, date, savefig=False):
 
 def weightfunction(obs_id, local_time, date, weight):
     """
-    Show plot of target weighting function with respect to time.
+    Show plot of target weighting function with respect to tot_time.
 
     Parameters
     ----------
     obs_id : string
         Unique observation identifier
 
-    local_time : array of strings or 'astropy.time.core.Time' array
-        Time grid of local times in format accepted by 'astropy.time.Time'
+    local_time : array of strings or 'astropy.tot_time.core.Time' array
+        Time grid of local times in format accepted by 'astropy.tot_time.Time'
 
     date : string
         Plot date
@@ -447,11 +447,11 @@ def weightcomponents(obs_id, ra, dec, iq, cc, bg, wv, elev_const, i_wins, band, 
         elev_const = {type='Hour Angle', min='-2.00', max='2.00'}
 
     i_wins : list of integer pair(s)
-        indices of observation time window(s) along time grid.
+        indices of observation tot_time window(s) along tot_time grid.
 
         Example
         -------
-        an observation with two time windows would look something like...
+        an observation with two tot_time windows would look something like...
         i_wins = [
                   [0,80],
                   [110, 130],
@@ -467,25 +467,25 @@ def weightcomponents(obs_id, ra, dec, iq, cc, bg, wv, elev_const, i_wins, band, 
         fraction of observation completed
 
     AM : np.array of floats
-        target airmasses along time grid
+        target airmasses along tot_time grid
 
     HA : np.array of 'astropy.units' hourangles
-        target hour angles along time grid
+        target hour angles along tot_time grid
 
     AZ : np.array of 'astropy.units' radians
-        target azimuth angles along time grid
+        target azimuth angles along tot_time grid
 
     skyiq : np.array of float
-        sky image quality percentile along time grid
+        sky image quality percentile along tot_time grid
 
     skycc : np.array of float
-        sky cloud condition percentile along time grid
+        sky cloud condition percentile along tot_time grid
 
     skywv : np.array of float
-        sky water vapour percentile along time grid
+        sky water vapour percentile along tot_time grid
 
     skybg : array of floats
-        target sky background percentiles along time grid
+        target sky background percentiles along tot_time grid
 
     latitude : '~astropy.coordinates.angles.Latitude' or '~astropy.unit.Quantity'
         observatory latitude
@@ -494,13 +494,13 @@ def weightcomponents(obs_id, ra, dec, iq, cc, bg, wv, elev_const, i_wins, band, 
         Completion fraction of program
 
     winddir : np.array of 'astropy.units' degrees
-        wind direction along time grid
+        wind direction along tot_time grid
 
     windvel : np.array of 'astropy.units' kilometers/hour
-        wind velocity along time grid
+        wind velocity along tot_time grid
 
     wra : np.ndarray of floats
-        RA time distribution weighting factor
+        RA tot_time distribution weighting factor
     """
 
     print('\n\t{} weights\n\t-------------------------'.format(obs_id))
@@ -614,12 +614,12 @@ def weightcomponents(obs_id, ra, dec, iq, cc, bg, wv, elev_const, i_wins, band, 
 
 def _hour_from_midnight(local_time):
     """
-    Get array of the time difference from local midnight for each time in array 'localtimes'.
+    Get array of the tot_time difference from local midnight for each tot_time in array 'localtimes'.
 
     Parameters
     ----------
     local_time : array of strings
-        local time in iso format (i.e. 'YYYY-MM-DD hh:mm:ss.sss')
+        local tot_time in iso format (i.e. 'YYYY-MM-DD hh:mm:ss.sss')
 
     Returns
     -------
@@ -635,12 +635,12 @@ def _hour_from_midnight(local_time):
 
 def test_hour_from_midnight():
     print(' Test _hour_from_midnight()...')
-    print('\n Case that time array begins before midnight:')
+    print('\n Case that tot_time array begins before midnight:')
     print(' Input times = [\'2018-07-25 19:00:40.529\', \'2018-07-26 06:36:40.529\']')
     print(' Difference from midnight =',
           _hour_from_midnight(Time(['2018-07-25 19:00:40.529', '2018-07-26 06:36:40.529'])))
 
-    print('\n Case that time array begins after midnight:')
+    print('\n Case that tot_time array begins after midnight:')
     print(' Input times = [\'2018-07-26 2:00:40.529\', \'2018-07-26 06:36:40.529\']')
     print(' Difference from midnight =',
           _hour_from_midnight(Time(['2018-07-26 2:00:40.529', '2018-07-26 06:36:40.529'])))

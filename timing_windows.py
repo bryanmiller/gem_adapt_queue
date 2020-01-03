@@ -1,9 +1,9 @@
 # Matt Bonnyman 27 July 2018
-# This module contains several functions for converting and constrain Gemini observing time constraints.
+# This module contains several functions for converting and constrain Gemini observing tot_time constraints.
 # get_timing_windows is the main method.
 
 
-# import time as t
+# import tot_time as t
 import astropy.units as u
 from astropy.time import Time
 from multiprocessing import cpu_count
@@ -21,18 +21,18 @@ def time_window_indices(utc, time_wins, dt, verbose = False):
 
     Parameters
     ----------
-    utc : 'astropy.time.core.Time' np.array
-        UTC time grid for scheduling period (i.e. night)
+    utc : 'astropy.tot_time.core.Time' np.array
+        UTC tot_time grid for scheduling period (i.e. night)
 
     dt : 'astropy.units'
-        size of time grid spacing
+        size of tot_time grid spacing
 
-    time_wins : 'astropy.time.core.Time' pair(s)
-        observation time windows during scheduling period.
+    time_wins : 'astropy.tot_time.core.Time' pair(s)
+        observation tot_time windows during scheduling period.
 
         Example
         -------
-        An observation with 4 time windows within the current night...
+        An observation with 4 tot_time windows within the current night...
         time_wins = [
                      [<Time object: scale='utc' format='unix' value=1522655300.0>,
                       <Time object: scale='utc' format='unix' value=1522655388.0>],
@@ -77,8 +77,8 @@ def time_window_indices(utc, time_wins, dt, verbose = False):
                     # print(utc[i].value, win[0].value, (utc[i] + dt).value)
                     # print(utc[i].value <= win[0].value, win[0] < utc[i] + dt)
 
-                    # Note: there is a astropy.time.Time comparison error that is
-                    # due to rounding error (issue: 'Float comparison issues with time
+                    # Note: there is a astropy.tot_time.Time comparison error that is
+                    # due to rounding error (issue: 'Float comparison issues with tot_time
                     # and quantity #6970').  It appears that as Time objects are manipulated
                     # they are converted to TAI then back to UTC.
                     # As a result, equal times were occasionally considered
@@ -105,7 +105,7 @@ def time_window_indices(utc, time_wins, dt, verbose = False):
 
             if verbose:
                 print('index window boundaries', i_start, i_end)
-                print('corresponding time grid times', utc[i_start].iso, utc[i_end].iso)
+                print('corresponding tot_time grid times', utc[i_start].iso, utc[i_end].iso)
 
             i_time_wins.append([i_start, i_end])
 
@@ -118,16 +118,16 @@ def time_window_indices(utc, time_wins, dt, verbose = False):
 
 def i_time(times, timegrid):
     """
-    Return, for a list of times, the indices at which they appear in a time grid.
-    Note: time strings must be in formats accepted by '~astropy.time.Time'. Preferably ISO format.
+    Return, for a list of times, the indices at which they appear in a tot_time grid.
+    Note: tot_time strings must be in formats accepted by '~astropy.tot_time.Time'. Preferably ISO format.
 
     Parameters
     ----------
     times : list or array of str
-        times to check in formats accepted by '~astropy.time.Time'
+        times to check in formats accepted by '~astropy.tot_time.Time'
 
     timegrid : list or array of str
-        time grid lf observing window in formats accepted by '~astropy.time.Time'
+        tot_time grid lf observing window in formats accepted by '~astropy.tot_time.Time'
 
     Returns
     -------
@@ -149,8 +149,8 @@ def i_time(times, timegrid):
 
 def checkwindow(times, timegrid):
     """
-    Check which times are within the boundaries of a time grid.  Return an array of booleans.
-    Note: time strings must be in formats accepted by '~astropy.time.Time'. Preferably ISO format.
+    Check which times are within the boundaries of a tot_time grid.  Return an array of booleans.
+    Note: tot_time strings must be in formats accepted by '~astropy.tot_time.Time'. Preferably ISO format.
 
     Parameters
     ----------
@@ -158,7 +158,7 @@ def checkwindow(times, timegrid):
         times to check
 
     timegrid : list or array of str
-        times in grid (in formats accepted by '~astropy.time.Time')
+        times in grid (in formats accepted by '~astropy.tot_time.Time')
 
     Returns
     -------
@@ -176,7 +176,7 @@ def checkwindow(times, timegrid):
 
 def convconstraint(time_const, start, end, current_time=None, verbose = False):
     """
-    Convert and compute time windows within scheduling period from time constraints 'time_const' for and
+    Convert and compute tot_time windows within scheduling period from tot_time constraints 'time_const' for and
     observation in the ObsTable structure.
 
     Parameters
@@ -188,24 +188,24 @@ def convconstraint(time_const, start, end, current_time=None, verbose = False):
         ------
         time_const = '[{start, duration, repeats, period}, {start, duration, repeats, period}, ...]'
 
-               start    :   unix time in milliseconds (-1 = current)
+               start    :   unix tot_time in milliseconds (-1 = current)
             duration    :   window length in milliseconds (-1 = infinite)
              repeats    :   number of repeats (-1 = infinite)
               period    :   milliseconds between window start times
 
-    start : '~astropy.time.core.Time'
-        Scheduling period start time.
+    start : '~astropy.tot_time.core.Time'
+        Scheduling period start tot_time.
 
-    end : '~astropy.time.core.Time'
-        Scheduling period end time.
+    end : '~astropy.tot_time.core.Time'
+        Scheduling period end tot_time.
 
-    current_time : '~astropy.time.core.Time' or None
-        Current time in simulation (for triggering ToO time constraints).
+    current_time : '~astropy.tot_time.core.Time' or None
+        Current tot_time in simulation (for triggering ToO tot_time constraints).
 
     Returns
     -------
-    time_win : list of '~astropy,time.core.Time' arrays, or None
-        Array of time pairs of time windows overlapping with scheduling period.  Returns None is no time windows
+    time_win : list of '~astropy,tot_time.core.Time' arrays, or None
+        Array of tot_time pairs of tot_time windows overlapping with scheduling period.  Returns None is no tot_time windows
         overlap with the scheduling window.
 
     Example
@@ -222,20 +222,20 @@ def convconstraint(time_const, start, end, current_time=None, verbose = False):
         print('start', start)
         print('end', end)
 
-    infinity = 3. * 365. * 24. * u.h  # infinite time duration
+    infinity = 3. * 365. * 24. * u.h  # infinite tot_time duration
 
-    # Split individual time constraint strings into list
+    # Split individual tot_time constraint strings into list
     string = re.sub('[\[{}\]]', '', time_const).split(',')  # remove brackets
     string = [tc.strip() for tc in string]  # remove whitespace
 
     if verbose:
         print('Constraint strings: ', string)
 
-    if string[0] == '':  # if no time constraints
+    if string[0] == '':  # if no tot_time constraints
         return [[start, end]]
 
-    else:  # if observation has time constraints
-        obs_win = []  # observation time windows
+    else:  # if observation has tot_time constraints
+        obs_win = []  # observation tot_time windows
         tc = [re.findall(r'[+-]?\d+(?:\.\d+)?', val) for val in string]  # split numbers into lists
         tc.sort()  # sort constraints into chronological order
 
@@ -244,13 +244,13 @@ def convconstraint(time_const, start, end, current_time=None, verbose = False):
 
         for const in tc:  # cycle through constraints
 
-            # time window start time t0 (unix time format milliseconds).
-            # for ToOs, the timing constraint must begin at the time of arrival to the queue.
-            # To do this, set the ToO program start to the time of arrival, and give the
-            # ToO observation time constraint a t0 value of -1.  In this case, the time constraint
-            # will begin from the new program start time.
+            # tot_time window start tot_time t0 (unix tot_time format milliseconds).
+            # for ToOs, the timing constraint must begin at the tot_time of arrival to the queue.
+            # To do this, set the ToO program start to the tot_time of arrival, and give the
+            # ToO observation tot_time constraint a t0 value of -1.  In this case, the tot_time constraint
+            # will begin from the new program start tot_time.
             t0 = float(const[0])
-            if t0 == -1:  # -1 = current time in simulation
+            if t0 == -1:  # -1 = current tot_time in simulation
                 t0 = current_time
             else:
                 t0 = Time((float(const[0]) * u.ms).to_value('s'), format='unix', scale='utc')
@@ -271,14 +271,14 @@ def convconstraint(time_const, start, end, current_time=None, verbose = False):
             if verbose:
                 print('t0.iso, duration, repeats, period: ', t0.iso, duration, repeats, period)
 
-            n_win = repeats + 1  # number of time windows in constraint including repeats
+            n_win = repeats + 1  # number of tot_time windows in constraint including repeats
             win_start = t0
-            for j in range(n_win):  # cycle through time window repeats
-                win_start = win_start + period  # start of current time window
-                win_end = win_start + duration  # start of current time window
+            for j in range(n_win):  # cycle through tot_time window repeats
+                win_start = win_start + period  # start of current tot_time window
+                win_end = win_start + duration  # start of current tot_time window
                 if verbose:
                     print('j, window: ', j, [win_start.iso, win_end.iso])
-                # save time window if there is overlap with schedule period
+                # save tot_time window if there is overlap with schedule period
                 if win_start < end and start < win_end:
                     obs_win.append([win_start, win_end])
                     if verbose:
@@ -300,20 +300,20 @@ def twilights(twilight_evening, twilight_morning, obs_windows, verbose = False):
 
     Parameters
     ----------
-    twilight_evening : '~astropy.time.core.Time' array
-        Evening twilight time for scheduling period (UTC)
+    twilight_evening : '~astropy.tot_time.core.Time' array
+        Evening twilight tot_time for scheduling period (UTC)
 
-    twilight_morning : '~astropy.time.core.Time' array
-        Morning twilight time for scheduling period (UTC)
+    twilight_morning : '~astropy.tot_time.core.Time' array
+        Morning twilight tot_time for scheduling period (UTC)
 
-    obs_windows : list of '~astropy.time.core.Time' pairs, or None
-        Observation timing window time-pairs in UTC.
-        Each observation can have any number of time windows.
+    obs_windows : list of '~astropy.tot_time.core.Time' pairs, or None
+        Observation timing window tot_time-pairs in UTC.
+        Each observation can have any number of tot_time windows.
 
     Returns
     -------
-    new_windows : list of lists of '~astropy.time.core.Time' pairs or None
-        New list of time windows constrained within twilights.
+    new_windows : list of lists of '~astropy.tot_time.core.Time' pairs or None
+        New list of tot_time windows constrained within twilights.
     """
 
     new_windows = []
@@ -325,12 +325,12 @@ def twilights(twilight_evening, twilight_morning, obs_windows, verbose = False):
             if verbose:
                 print('\ntwilights: ', twilight_evening[i].iso, twilight_morning[i].iso)
 
-            for j in range(len(obs_windows)):  # cycle through time windows
+            for j in range(len(obs_windows)):  # cycle through tot_time windows
 
                 if verbose:
                     print('time_const[' + str(j) + ']:', obs_windows[j][0].iso, obs_windows[j][1].iso)
 
-                # save time window if there is overlap with schedule period
+                # save tot_time window if there is overlap with schedule period
                 if obs_windows[j][0] < twilight_morning[i] and twilight_evening[i] < obs_windows[j][1]:
                     # Add window with either twilight times or window edges as boundaries (whichever are innermost).
                     new_windows.append([max([twilight_evening[i], obs_windows[j][0]]),
@@ -356,7 +356,7 @@ def instrument(i_obs, obs_inst, obs_disp, obs_fpu, obs_mos, insts, gmos_disp, gm
                verbose = False):
     """
     Constrain observation timing constraints in accordance with the installed instruments
-    and component configuration on the current time.
+    and component configuration on the current tot_time.
     Output indices of observations matching the nightly instruments and components.
 
     Parameters
@@ -451,26 +451,26 @@ def instrument(i_obs, obs_inst, obs_disp, obs_fpu, obs_mos, insts, gmos_disp, gm
 
 def nightly_calendar(twilight_evening, twilight_morning, time_windows, verbose = False):
     """
-    Sort observation time windows by nightly observing window.
+    Sort observation tot_time windows by nightly observing window.
 
     Parameters
     ----------
-    twilight_evening : '~astropy.time.core.Time'
-        Evening twilight time for scheduling period (UTC)
+    twilight_evening : '~astropy.tot_time.core.Time'
+        Evening twilight tot_time for scheduling period (UTC)
 
-    twilight_morning : '~astropy.time.core.Time'
-        Morning twilight time for scheduling period (UTC)
+    twilight_morning : '~astropy.tot_time.core.Time'
+        Morning twilight tot_time for scheduling period (UTC)
 
-    time_windows : list of lists of '~astropy.time.core.Time' pairs
-        Array of time windows for all observations.
+    time_windows : list of lists of '~astropy.tot_time.core.Time' pairs
+        Array of tot_time windows for all observations.
 
     Returns
     -------
     i_obs : int array
         Indices of observations with a time_window during the night of the provided date.
 
-    obs_windows : array of '~astropy.time.core.Time' pair(s)
-        Observation time windows for current night corresponding to 'i_obs'.
+    obs_windows : array of '~astropy.tot_time.core.Time' pair(s)
+        Observation tot_time windows for current night corresponding to 'i_obs'.
     """
 
     # define start of current day as local noon
@@ -481,7 +481,7 @@ def nightly_calendar(twilight_evening, twilight_morning, time_windows, verbose =
         print('\nDate window (start,end): ', night_start.iso, night_end.iso)
 
     i_obs = []  # list of current night's observations
-    obs_windows = []  # time windows corresponding to i_obs
+    obs_windows = []  # tot_time windows corresponding to i_obs
     for i in range(len(time_windows)):  # cycle through observations
 
         if verbose:
@@ -491,7 +491,7 @@ def nightly_calendar(twilight_evening, twilight_morning, time_windows, verbose =
 
             obs_wins = []
 
-            for j in range(len(time_windows[i])):  # cycle through time windows
+            for j in range(len(time_windows[i])):  # cycle through tot_time windows
 
                 if verbose:
                     print('\t\ttime_window[' + str(i) + '][' + str(j) + ']:',
@@ -505,7 +505,7 @@ def nightly_calendar(twilight_evening, twilight_morning, time_windows, verbose =
                 # else:
                 #     print('\t\tnot added')
 
-            # if time window(s) overlapped with night, save obs index and window(s)
+            # if tot_time window(s) overlapped with night, save obs index and window(s)
             if len(obs_wins) != 0:
                 i_obs.append(i)
                 obs_windows.append(obs_wins)
@@ -527,8 +527,8 @@ def nightly_calendar(twilight_evening, twilight_morning, time_windows, verbose =
 
 def elevation_const(targets, i_wins, elev_const):
     """
-    Restrict time windows for elevation constraints.
-    If all time windows for a given observation are removed, let  time_window[i] = NoneType.
+    Restrict tot_time windows for elevation constraints.
+    If all tot_time windows for a given observation are removed, let  time_window[i] = NoneType.
 
     Parameters
     ----------
@@ -536,7 +536,7 @@ def elevation_const(targets, i_wins, elev_const):
         Target table for current night (Columns: 'i', 'id', 'ZD', 'HA', 'AZ', 'AM', 'mdist').
 
     i_wins : list of lists
-        Observation time windows as time grid indices.  Each observation may have one or more time windows.
+        Observation tot_time windows as tot_time grid indices.  Each observation may have one or more tot_time windows.
 
         Example
         -------
@@ -553,8 +553,8 @@ def elevation_const(targets, i_wins, elev_const):
     Returns
     -------
     targets : '~astropy.table.Table' target table
-        Target table for current night with time windows constrained to meet elevation constraints.
-        If an observation has no remaining time windows, the table cell is given NoneType.
+        Target table for current night with tot_time windows constrained to meet elevation constraints.
+        If an observation has no remaining tot_time windows, the table cell is given NoneType.
     """
 
     verbose = False
@@ -573,7 +573,7 @@ def elevation_const(targets, i_wins, elev_const):
 
             j = targets['i'].data[i]  # elevation constraint index of target
 
-            # Get time grid window indices for elevation constraint
+            # Get tot_time grid window indices for elevation constraint
             if elev_const[j]['type'] == 'Hour Angle':
                 if verbose:
                     print('\nHour Angle!')
@@ -619,23 +619,23 @@ def elevation_const(targets, i_wins, elev_const):
                     print('No elevation constraint!')
                 continue
 
-            # Set new time windows boundaries if observation had elevation constraint
+            # Set new tot_time windows boundaries if observation had elevation constraint
             if i_start != -1 and i_end != -1:
 
                 if verbose:
                     print('i_start, i_end: ', i_start, i_end)
 
-                # Cycle through observation time windows for current night.
+                # Cycle through observation tot_time windows for current night.
                 # Adjust each window to satisfy elevation constraint.
                 j = 0
 
                 while True:
                     if verbose:
-                        print('initial time window:',
+                        print('initial tot_time window:',
                               i_wins[i][j][0],
                               i_wins[i][j][1])
 
-                    # If current time window overlaps with elevation constraint window, set new window.
+                    # If current tot_time window overlaps with elevation constraint window, set new window.
                     if i_wins[i][j][0] <= i_end and i_start <= i_wins[i][j][1]:
 
                         # Change window to portion of overlap.
@@ -661,7 +661,7 @@ def elevation_const(targets, i_wins, elev_const):
                     i_wins[i] = None
 
             if verbose:
-                print('new observation time windows for tonight:')
+                print('new observation tot_time windows for tonight:')
                 if i_wins[i] is not None:
                     for j in range(len(i_wins[i])):
                         print([i_wins[i][j][0], i_wins[i][j][1]])
@@ -682,7 +682,7 @@ def get_timing_windows(site, timetable, moon, obs, progs, instcal, current_time=
     1. Convert timing window constraints
     2. Constrain within plan boundaries and program activation dates
     3. Constrain within twilights
-    4. Organize time windows by date
+    4. Organize tot_time windows by date
     5. Constrain within instrument calendar
     6. Generate a list of nightly target data tables (from target_table.py)
     7. Constrain windows within elevation constraints
@@ -709,8 +709,8 @@ def get_timing_windows(site, timetable, moon, obs, progs, instcal, current_time=
     instcal : 'astropy.table.Table'
         instrument calendar table generated by instrument_table.py
 
-    current_time : 'astropy.time.core.Time' [DEFAULT = None]
-        Current time in simulation (used for setting start time of ToO time constraint)
+    current_time : 'astropy.tot_time.core.Time' [DEFAULT = None]
+        Current tot_time in simulation (used for setting start tot_time of ToO tot_time constraint)
 
     Returns
     -------
@@ -723,11 +723,11 @@ def get_timing_windows(site, timetable, moon, obs, progs, instcal, current_time=
     # verbose = verbose  # basic outputs
     verbose2 = debug  # detailed outputs
 
-    # ====== Convert timing constraints to time windows ======
+    # ====== Convert timing constraints to tot_time windows ======
     if verbose_progress:
-        print('...timing windows (convert time constraints)')
+        print('...timing windows (convert tot_time constraints)')
 
-    # Compute all time windows of observations within scheduling period boundaries or program activation/deactivation
+    # Compute all tot_time windows of observations within scheduling period boundaries or program activation/deactivation
     # times.  Whichever are constraining.
 
     # print(obs['i_prog'].data[0])
@@ -756,22 +756,22 @@ def get_timing_windows(site, timetable, moon, obs, progs, instcal, current_time=
     # ====== Timing windows (twilights) ======
     if verbose_progress:
         print('...timing windows (twilights)')
-    # Constrain time windows to within nautical twilights
+    # Constrain tot_time windows to within nautical twilights
     time_windows = Parallel(n_jobs=ncpu)(delayed(twilights)(twilight_evening=timetable['twilight_evening'].data,
                                                           twilight_morning=timetable['twilight_morning'].data,
                                                           obs_windows=time_windows[i])
                                        for i in range(len(obs)))
 
-    # ====== Sort time windows and observation indices by day ======
+    # ====== Sort tot_time windows and observation indices by day ======
     if verbose_progress:
         print('...timing windows (organize into nights)')
     # By this point, timing windows are sorted by observation.
-    # Reorganize time windows such that they are sorted by night.
+    # Reorganize tot_time windows such that they are sorted by night.
     # For each night, make an array of indices corresponding to the
-    # available observation time windows on that night.
+    # available observation tot_time windows on that night.
     # Make a second array containing the corresponding timing window(s).
     i_obs_nightly = []  # Lists of observation indices (one per night).
-    time_windows_nightly = []  # Lists of corresponding time windows.
+    time_windows_nightly = []  # Lists of corresponding tot_time windows.
     for i in range(len(timetable['date'])):
         i_obs_tonight, time_windows_tonight = \
             nightly_calendar(twilight_evening=timetable['twilight_evening'][i],
@@ -793,7 +793,7 @@ def get_timing_windows(site, timetable, moon, obs, progs, instcal, current_time=
     # ====== Timing windows (instrument calendar) ======
     if verbose_progress:
         print('...timing windows (instrument calendar)')
-    # Constrain time windows according to the installed instruments and
+    # Constrain tot_time windows according to the installed instruments and
     # component configuration on each night
 
     i_obs_insts = Parallel(n_jobs=ncpu)(delayed(instrument)(i_obs=i_obs_nightly[i],
@@ -821,12 +821,12 @@ def get_timing_windows(site, timetable, moon, obs, progs, instcal, current_time=
     #                           f2_fpu=instcal['f2_fpu'].data[i])
     #                for i in range(len(timetable['date']))]
 
-    # Get nightly observation indices and time windows from results of the instrument calendar
+    # Get nightly observation indices and tot_time windows from results of the instrument calendar
     for i in range(len(timetable['date'])):
         i_obs_nightly[i] = [i_obs_nightly[i][j] for j in i_obs_insts[i]]
         time_windows_nightly[i] = [time_windows_nightly[i][j] for j in i_obs_insts[i]]
 
-    # print observation indices and corresponding time windows on each night
+    # print observation indices and corresponding tot_time windows on each night
     if verbose2:
         for i in range(len(time_windows_nightly)):
             for j in range(len(time_windows_nightly[i])):
@@ -837,10 +837,10 @@ def get_timing_windows(site, timetable, moon, obs, progs, instcal, current_time=
                     for window in time_windows_nightly[i][j]:
                         print('\t', window[0].iso, window[1].iso)
 
-    # ====== Convert time windows to time grid indices ======
+    # ====== Convert tot_time windows to tot_time grid indices ======
     if verbose_progress:
-        print('...time window indices')
-    dt = deltat(time_strings=timetable['utc'][0][0:2])  # time grid spacing
+        print('...tot_time window indices')
+    dt = deltat(time_strings=timetable['utc'][0][0:2])  # tot_time grid spacing
     i_wins_nightly = []
     for i in range(len(time_windows_nightly)):
         # i_wins_tonight = Parallel(n_jobs=10)(delayed(time_window_indices)(utc=timetable['utc'].data[i],
@@ -902,7 +902,7 @@ def get_timing_windows(site, timetable, moon, obs, progs, instcal, current_time=
                                       elev_const=obs['elev_const'].data)
                       for i in range(len(timetable['date']))]
 
-    # ====== Add time window column to target tables ======
+    # ====== Add tot_time window column to target tables ======
     for i in range(len(targetcal)):
         targetcal[i]['i_wins'] = i_wins_nightly[i]
 
@@ -941,7 +941,7 @@ def get_timing_windows(site, timetable, moon, obs, progs, instcal, current_time=
         [print(targets) for targets in targetcal]
 
     if verbose2:
-        # print nightly observations and time windows
+        # print nightly observations and tot_time windows
         for i in range(len(targetcal)):
             if len(targetcal[i]) != 0:
                 print('\ntargetcal[i][\'i\']:\n', targetcal[i]['i'].data)
@@ -985,7 +985,7 @@ def test_i_time():
            '2018-07-02 02:49:57.001', '2018-07-02 03:49:57.001', '2018-07-02 04:49:57.001', '2018-07-02 05:49:57.001',
            '2018-07-02 06:49:57.001', '2018-07-02 07:49:57.001', '2018-07-02 08:49:57.001', '2018-07-02 09:49:57.001']
     print('times to get indices', times)
-    print('time array', utc)
+    print('tot_time array', utc)
     print(i_time(times, utc))
 
     assert i_time(times, utc).all() == np.array([4, 7]).all()

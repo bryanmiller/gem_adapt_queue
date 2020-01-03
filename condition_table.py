@@ -29,6 +29,7 @@ def checkdist(conddist):
         return 'variant'
     else:
         print(' ValueError: Condition distribution type \'{}\' not recognized.'.format(conddist))
+        print(' Conditions distributions must be "r", "random", "v", or "variant".')
         raise ValueError
 
 

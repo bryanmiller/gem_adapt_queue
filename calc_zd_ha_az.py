@@ -14,7 +14,7 @@ def calc_zd_ha_az(lst, latitude, ra, dec):
     Parameters
     ----------
     lst : np.array of '~astropy.units.quantity.Quantity'
-        Numpy array of local sidereal time(s).
+        Numpy array of local sidereal times.
 
     latitude : '~astropy.coordinates.angles.Latitude'
         Observer latitude.

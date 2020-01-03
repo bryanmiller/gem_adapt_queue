@@ -18,7 +18,7 @@ def getsite(site_name, daylightsavings):
         - 'gemini_south' or 'CP' (Cerro Pachon).
 
     daylightsavings : boolean
-        Toggle daylight savings time (does not apply to Gemini North)
+        Toggle daylight savings tot_time (does not apply to Gemini North)
 
     Returns
     -------
@@ -29,7 +29,7 @@ def getsite(site_name, daylightsavings):
         Pytz timezone name for observatory site
 
     utc_to_local : '~astropy.units' hours
-        Time difference between utc and local time in hours.
+        Time difference between utc and local tot_time in hours.
     """
 
     if np.logical_or(site_name == 'gemini_south', site_name == 'CP'):

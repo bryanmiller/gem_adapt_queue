@@ -8,7 +8,7 @@ import astropy.units as u
 
 def radist(ra, tot_time, obs_time, verbose = False):
     """
-    Compute weighting factors for RA distribution of total remaining observation time.
+    Compute weighting factors for RA distribution of total remaining observation tot_time.
     Observations are binned using 30 degree regions around the celestial sphere.
 
     Parameters
@@ -42,13 +42,14 @@ def radist(ra, tot_time, obs_time, verbose = False):
         print('histogram bin indices', bin_nums)
 
     # Sum total observing hours in 30 degree bins
-    bin_factors = np.zeros(12) * u.h
-    for i in np.arange(0, 12):
+    nbin = len(bin_edges) - 1
+    bin_factors = np.zeros(nbin) * u.h
+    for i in np.arange(0, nbin):
         ii = np.where(bin_nums == i)[0][:]
         bin_factors[i] = bin_factors[i] + sum(tot_time[ii] - obs_time[ii])
 
     if verbose:
-        print('Total time (ra distribution)', bin_factors)
+        print('Total tot_time (ra distribution)', bin_factors)
 
     bin_factors = bin_factors / np.mean(bin_factors)
 
@@ -57,8 +58,11 @@ def radist(ra, tot_time, obs_time, verbose = False):
 
     # Generate list of ra weights corresponding to order of observations in obstable
     wra = np.empty(len(ra))  # reset index value
-    for j in np.arange(12):  # Get hour angle histogram bin of current target
+    for j in np.arange(nbin):  # Get hour angle histogram bin of current target
         wra[np.where(np.logical_and(ra >= bin_edges[j], ra < bin_edges[j + 1]))[0][:]] = bin_factors[j]
+
+    if verbose:
+        print('wra', wra)
 
     return wra
 
@@ -88,16 +92,16 @@ def cond_match(iq, cc, bg, wv, skyiq, skycc, skywv, skybg, negha, user_prior, ve
         observation water vapour constraint percentile
 
     skyiq : np.array of float
-        sky image quality percentile along time grid
+        sky image quality percentile along tot_time grid
 
     skycc : np.array of float
-        sky cloud condition percentile along time grid
+        sky cloud condition percentile along tot_time grid
 
     skywv : np.array of float
-        sky water vapour percentile along time grid
+        sky water vapour percentile along tot_time grid
 
     skybg : array of floats
-        target sky background percentiles along time grid
+        target sky background percentiles along tot_time grid
 
     skybg : np.ndarray of floats
         actual sky background conditions converted from sky brightness magnitudes
@@ -125,6 +129,7 @@ def cond_match(iq, cc, bg, wv, skyiq, skycc, skywv, skybg, negha, user_prior, ve
 
     # Multiply weights by 0.75 where iq better than required and target
     # does not set soon and not a ToO. Effectively drop one band.
+    # Bryan - using negha is wrong here, a setting target will have min(HA) > 0
     i_better_iq = np.where(skyiq < iq)[0][:]
     if len(i_better_iq) != 0 and negha and 'Target of Opportunity' not in user_prior:
         cmatch = cmatch * 0.75
@@ -189,7 +194,7 @@ def airmass(am, ha, elev):
         target airmass at times throughout observing window.
 
     ha : array of 'astropy.units' hourangles
-        target hour angles along time grid
+        target hour angles along tot_time grid
 
     elev : dictionary
         observation elevation constraint.  Keys 'type', 'min', and 'max'.
@@ -223,13 +228,13 @@ def windconditions(dir, vel, az, verbose = False):
     Parameters
     ----------
     az : np.array of 'astropy.units' degrees
-        target azimuth angles along time grid
+        target azimuth angles along tot_time grid
 
     dir : np.array of 'astropy.units' degrees
-        wind direction along time grid
+        wind direction along tot_time grid
 
     vel : np.array of 'astropy.units' m/s
-        wind velocity along time grid
+        wind velocity along tot_time grid
 
     Return
     -------
@@ -268,7 +273,7 @@ def hourangle(latitude, dec, ha, verbose = False):
         target declination
 
     ha : np.ndarray of '~astropy.units' hourangle
-        target hour angles along time grid
+        target hour angles along tot_time grid
 
     Return
     -------
@@ -289,10 +294,12 @@ def hourangle(latitude, dec, ha, verbose = False):
             wdec = wval[i]
 
     # HA - if within -1hr of transit at  twilight it gets higher weight
+    # Bryan - multiplying by wdec here now seems wrong, it will change the shape
     if abs(decdiff) < 40. * u.deg:
         c = wdec * np.array([3., 0.1, -0.06])  # weighted to slightly positive HA
     else:
         c = wdec * np.array([3., 0., -0.08])  # weighted to 0 HA if Xmin > 1.3
+    # Multiply by wdec here? Need to test
     wha = c[0] + c[1] / u.hourangle * ha + c[2] / (u.hourangle ** 2) * ha ** 2
     ii = np.where(wha <= 0)[0][:]
     wha[ii] = 0.
@@ -301,6 +308,11 @@ def hourangle(latitude, dec, ha, verbose = False):
         wha = wha * 1.5
         if verbose:
             print('multiplied wha by 1.5')
+    # Kristin's suggestion
+    # if np.amin(ha) >= 0. * u.hourangle:
+    #     wha = wha * 10.5
+    #     if verbose:
+    #         print('multiplied wha by 10.5')
 
     if verbose:
         print('wdec', wdec)
@@ -403,17 +415,17 @@ def complete(prog_comp, obs_comp):
 
 def time_wins(grid_size, i_wins, verbose = False):
     """
-    Set weights to 0 if they are not within the observation time windows.
+    Set weights to 0 if they are not within the observation tot_time windows.
 
     grid_size : int
-        number of spaces in time grid
+        number of spaces in tot_time grid
 
     i_wins : list of integer pair(s)
-        indices of available time windows along time grid.
+        indices of available tot_time windows along tot_time grid.
 
         Example
         -------
-        An observation with 4 time windows within the current night...
+        An observation with 4 tot_time windows within the current night...
         time_wins[i] = [
                         [0, 10],
                         [30, 50],
@@ -424,7 +436,7 @@ def time_wins(grid_size, i_wins, verbose = False):
     Returns
     -------
     weights : np.array of floats
-        new observation weights along time grid.
+        new observation weights along tot_time grid.
 
     """
 
@@ -481,11 +493,11 @@ def obsweight(obs_id, ra, dec, iq, cc, bg, wv, elev_const, i_wins, band, user_pr
         elev_const = {type='Hour Angle', min='-2.00', max='2.00'}
 
     i_wins : list of integer pair(s)
-        indices of observation time window(s) along time grid.
+        indices of observation tot_time window(s) along tot_time grid.
 
         Example
         -------
-        an observation with two time windows would look something like...
+        an observation with two tot_time windows would look something like...
         i_wins = [
                   [0,80],
                   [110, 130],
@@ -502,25 +514,25 @@ def obsweight(obs_id, ra, dec, iq, cc, bg, wv, elev_const, i_wins, band, user_pr
         fraction of observation completed
 
     AM : np.array of floats
-        target airmasses along time grid
+        target airmasses along tot_time grid
 
     HA : np.array of 'astropy.units' hourangles
-        target hour angles along time grid
+        target hour angles along tot_time grid
 
     AZ : np.array of 'astropy.units' radians
-        target azimuth angles along time grid
+        target azimuth angles along tot_time grid
 
     skyiq : np.array of float
-        sky image quality percentile along time grid
+        sky image quality percentile along tot_time grid
 
     skycc : np.array of float
-        sky cloud condition percentile along time grid
+        sky cloud condition percentile along tot_time grid
 
     skywv : np.array of float
-        sky water vapour percentile along time grid
+        sky water vapour percentile along tot_time grid
 
     skybg : array of floats
-        target sky background percentiles along time grid
+        target sky background percentiles along tot_time grid
 
     latitude : '~astropy.coordinates.angles.Latitude' or '~astropy.unit.Quantity'
         observatory latitude
@@ -529,13 +541,13 @@ def obsweight(obs_id, ra, dec, iq, cc, bg, wv, elev_const, i_wins, band, user_pr
         Completion fraction of program
 
     winddir : np.array of 'astropy.units' degrees
-        wind direction along time grid
+        wind direction along tot_time grid
 
     windvel : np.array of 'astropy.units' m/s
-        wind velocity along time grid
+        wind velocity along tot_time grid
 
     wra : np.ndarray of floats
-        RA time distribution weighting factor
+        RA tot_time distribution weighting factor
 
     Returns
     -------
@@ -546,7 +558,7 @@ def obsweight(obs_id, ra, dec, iq, cc, bg, wv, elev_const, i_wins, band, user_pr
     if verbose or verbose2:
         print(obs_id, ra, dec, iq, cc, bg, wv, elev_const, band, user_prior, obs_comp)
 
-    # -- Match time windows --
+    # -- Match tot_time windows --
     wwins = time_wins(grid_size=len(skyiq), i_wins=i_wins)
     if verbose:
         print('wwins', wwins)

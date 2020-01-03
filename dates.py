@@ -6,7 +6,7 @@ from astropy.time import Time
 
 def getdates(startdate, utc_to_local, enddate=None):
     """
-    Generate '~astropy.time.Time' objects corresponding to 16:00:00 local time on evenings of first and last
+    Generate '~astropy.tot_time.Time' objects corresponding to 16:00:00 local tot_time on evenings of first and last
     nights of scheduling period.
 
     Parameters
@@ -18,15 +18,15 @@ def getdates(startdate, utc_to_local, enddate=None):
         End date (eg. 'YYYY-MM-DD'). If None, defaults to day after start date.
 
     utc_to_local : '~astropy.unit' hours
-        Time difference between utc and local time.
+        Time difference between utc and local tot_time.
 
     Returns
     -------
-    start : '~astropy.time.core.Time'
-        UTC corresponding to 16:00 local time on first night
+    start : '~astropy.tot_time.core.Time'
+        UTC corresponding to 16:00 local tot_time on first night
 
-    end : '~astropy.time.core.Time'
-        UTC corresponding to 16:00 local time on last night
+    end : '~astropy.tot_time.core.Time'
+        UTC corresponding to 16:00 local tot_time on last night
     """
 
     if startdate is None:
