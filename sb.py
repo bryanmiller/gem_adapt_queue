@@ -86,7 +86,9 @@ def sb(mpa, mdist, mZD, ZD, sZD, cc, verbose = False):
 
     kk = np.where(ii != jj)[0][:]
     if len(kk) != 0:
+        # There is a bug in the following line, not fixing it now for consistency with QPT
         fpkk = 6.2e7 * u.deg**2 / (mdist[kk]**2)  # original said fp=6.2d7/mdist[j]^2
+        # fpkk = (1.06 + np.cos(mdist[kk])**2) * 10.0**5.36 + 6.2e7 / (mdist[kk].value**2)
         Bmoon[kk] = fpkk * istar * 10 ** (-0.4 * k * xair(mZD[kk])) * (1.0 - 10 ** (-0.4 * k * xair(ZD[kk])))
 
     # hh = np.where(np.logical_and(cc > 0.5, cc < 0.8))[0][:]

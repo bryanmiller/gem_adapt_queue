@@ -256,9 +256,10 @@ def sb_to_cond(sb):
         sky background condition values
     """
 
-    cond = np.empty(len(sb), dtype=float)
-    ii = np.where(sb < 19.61)[0][:]
-    cond[ii] = 1.
+    cond = np.ones(len(sb), dtype=float)
+    # cond = np.empty(len(sb), dtype=float)
+    # ii = np.where(sb < 19.61)[0][:]
+    # cond[ii] = 1.
     ii = np.where(np.logical_and(sb >= 19.61, sb < 20.78))[0][:]
     cond[ii] = 0.8
     ii = np.where(np.logical_and(sb >= 20.78, sb < 21.37))[0][:]
